@@ -1,6 +1,6 @@
+import { useState } from 'react';
+import { StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 const SAMPLE_RECIPES = [
   {
@@ -66,23 +66,57 @@ const SAMPLE_RECIPES = [
 ];
 
 const CATEGORIES = ['All', 'Healthy', 'Pasta', 'Vegetarian', 'Mexican', 'Seafood'];
-import { Colors } from './globalStyles';
 
 export default function RecipeTabScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredRecipes = selectedCategory === 'All' 
-    ? SAMPLE_RECIPES 
-    : SAMPLE_RECIPES.filter(recipe => recipe.category === selectedCategory);
+  // Filter recipes by category and search query
+  const filteredRecipes = SAMPLE_RECIPES.filter(recipe => {
+    // Category filter
+    const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
+    
+    // Search filter (search in recipe name and ingredients)
+    const matchesSearch = searchQuery === '' || 
+      recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      recipe.ingredients.some(ingredient => 
+        ingredient.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.subtitle}>Need new ideas? Discover delicious meals here!</Text>
+        <Text style={styles.title}>Recipe Recommendations</Text>
+        <Text style={styles.subtitle}>Discover delicious meals</Text>
       </View>
       
       <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
       
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by recipe or ingredient..."
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {searchQuery !== '' && (
+          <TouchableOpacity 
+            style={styles.clearButton}
+            onPress={() => setSearchQuery('')}
+          >
+            <Text style={styles.clearButtonText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      {/* Category Filter */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -108,35 +142,45 @@ export default function RecipeTabScreen() {
         ))}
       </ScrollView>
 
+      {/* Recipe List */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.recipeGrid}>
-          {filteredRecipes.map((recipe) => (
-            <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
-              <View style={styles.recipeImageContainer}>
-                <Text style={styles.recipeEmoji}>{recipe.image}</Text>
-              </View>
-              
-              <View style={styles.recipeInfo}>
-                <Text style={styles.recipeName}>{recipe.name}</Text>
+          {filteredRecipes.length > 0 ? (
+            filteredRecipes.map((recipe) => (
+              <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
+                <View style={styles.recipeImageContainer}>
+                  <Text style={styles.recipeEmoji}>{recipe.image}</Text>
+                </View>
                 
-                <View style={styles.recipeDetails}>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailIcon}>⏱️</Text>
-                    <Text style={styles.detailText}>{recipe.prepTime}</Text>
+                <View style={styles.recipeInfo}>
+                  <Text style={styles.recipeName}>{recipe.name}</Text>
+                  
+                  <View style={styles.recipeDetails}>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailIcon}>⏱️</Text>
+                      <Text style={styles.detailText}>{recipe.prepTime}</Text>
+                    </View>
+                    
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailIcon}>🔥</Text>
+                      <Text style={styles.detailText}>{recipe.calories} cal</Text>
+                    </View>
                   </View>
                   
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailIcon}>🔥</Text>
-                    <Text style={styles.detailText}>{recipe.calories} cal</Text>
+                  <View style={styles.difficultyBadge}>
+                    <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
                   </View>
                 </View>
-                
-                <View style={styles.difficultyBadge}>
-                  <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No recipes found</Text>
+              <Text style={styles.emptyStateSubtext}>
+                Try a different search term or category
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -166,6 +210,33 @@ const styles = StyleSheet.create({
     height: 1,
     width: '90%',
     alignSelf: 'center',
+  },
+  searchContainer: {
+    marginHorizontal: 15,
+    marginBottom: 15,
+    position: 'relative',
+  },
+  searchInput: {
+    height: 50,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#000',
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 15,
+    top: 15,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    fontSize: 18,
+    color: '#999',
+    fontWeight: 'bold',
   },
   categoryContainer: {
     maxHeight: 50,
@@ -256,5 +327,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#007AFF',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    opacity: 0.6,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    opacity: 0.4,
   },
 });
