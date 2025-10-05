@@ -66,6 +66,7 @@ const SAMPLE_RECIPES = [
 ];
 
 const CATEGORIES = ['All', 'Healthy', 'Pasta', 'Vegetarian', 'Mexican', 'Seafood'];
+import { Colors } from './globalStyles';
 
 export default function RecipeTabScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
