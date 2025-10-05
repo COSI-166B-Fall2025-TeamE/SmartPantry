@@ -93,13 +93,13 @@ export default function RecipeTabScreen() {
         <Text style={styles.subtitle}>Discover delicious meals</Text>
       </View>
       
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
+      {/* <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" /> */}
       
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by recipe or ingredient..."
+          placeholder="Search by recipe or ingredient"
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -165,10 +165,10 @@ export default function RecipeTabScreen() {
                       <Text style={styles.detailIcon}>🔥</Text>
                       <Text style={styles.detailText}>{recipe.calories} cal</Text>
                     </View>
-                  </View>
-                  
-                  <View style={styles.difficultyBadge}>
-                    <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
+                    
+                    <View style={styles.difficultyBadge}>
+                      <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
+                    </View>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -239,27 +239,30 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   categoryContainer: {
-    maxHeight: 50,
+    maxHeight: 40,
     marginBottom: 15,
   },
   categoryContent: {
     paddingHorizontal: 15,
-    gap: 10,
+    gap: 8,
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
-    marginRight: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#CDD0E3',
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryChipActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#371B34',
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#666',
+    color: '#371B34',
+    textAlign: 'center',
   },
   categoryTextActive: {
     color: '#FFF',
@@ -301,8 +304,9 @@ const styles = StyleSheet.create({
   },
   recipeDetails: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 15,
-    marginBottom: 10,
+    backgroundColor: 'rgba(128, 128, 128, 0.05)',
   },
   detailItem: {
     flexDirection: 'row',
@@ -317,7 +321,6 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   difficultyBadge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
