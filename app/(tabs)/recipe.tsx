@@ -1,15 +1,144 @@
-import { StyleSheet } from 'react-native';
-
-import EditScreenInfo from '@/components/EditScreenInfo';
 import { Text, View } from '@/components/Themed';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+
+const SAMPLE_RECIPES = [
+  {
+    id: 1,
+    name: 'Grilled Chicken Salad',
+    prepTime: '25 mins',
+    difficulty: 'Easy',
+    calories: 320,
+    category: 'Healthy',
+    image: '🥗',
+    ingredients: ['Chicken', 'Lettuce', 'Tomatoes', 'Olive Oil']
+  },
+  {
+    id: 2,
+    name: 'Spaghetti Carbonara',
+    prepTime: '30 mins',
+    difficulty: 'Medium',
+    calories: 580,
+    category: 'Pasta',
+    image: '🍝',
+    ingredients: ['Pasta', 'Eggs', 'Bacon', 'Parmesan']
+  },
+  {
+    id: 3,
+    name: 'Vegetable Stir Fry',
+    prepTime: '20 mins',
+    difficulty: 'Easy',
+    calories: 240,
+    category: 'Vegetarian',
+    image: '🥘',
+    ingredients: ['Broccoli', 'Carrots', 'Soy Sauce', 'Garlic']
+  },
+  {
+    id: 4,
+    name: 'Beef Tacos',
+    prepTime: '35 mins',
+    difficulty: 'Easy',
+    calories: 450,
+    category: 'Mexican',
+    image: '🌮',
+    ingredients: ['Ground Beef', 'Tortillas', 'Cheese', 'Lettuce']
+  },
+  {
+    id: 5,
+    name: 'Salmon Teriyaki',
+    prepTime: '40 mins',
+    difficulty: 'Medium',
+    calories: 380,
+    category: 'Seafood',
+    image: '🐟',
+    ingredients: ['Salmon', 'Teriyaki Sauce', 'Rice', 'Vegetables']
+  },
+  {
+    id: 6,
+    name: 'Mushroom Risotto',
+    prepTime: '45 mins',
+    difficulty: 'Hard',
+    calories: 420,
+    category: 'Vegetarian',
+    image: '🍄',
+    ingredients: ['Arborio Rice', 'Mushrooms', 'Parmesan', 'White Wine']
+  }
+];
+
+const CATEGORIES = ['All', 'Healthy', 'Pasta', 'Vegetarian', 'Mexican', 'Seafood'];
 import { Colors } from './globalStyles';
 
 export default function RecipeTabScreen() {
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const filteredRecipes = selectedCategory === 'All' 
+    ? SAMPLE_RECIPES 
+    : SAMPLE_RECIPES.filter(recipe => recipe.category === selectedCategory);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Recipe Recommendations</Text>
+      <View style={styles.header}>
+        <Text style={styles.subtitle}>Need new ideas? Discover delicious meals here!</Text>
+      </View>
+      
       <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/recipe.tsx" />
+      
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryContainer}
+        contentContainerStyle={styles.categoryContent}
+      >
+        {CATEGORIES.map((category) => (
+          <TouchableOpacity
+            key={category}
+            style={[
+              styles.categoryChip,
+              selectedCategory === category && styles.categoryChipActive
+            ]}
+            onPress={() => setSelectedCategory(category)}
+          >
+            <Text style={[
+              styles.categoryText,
+              selectedCategory === category && styles.categoryTextActive
+            ]}>
+              {category}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.recipeGrid}>
+          {filteredRecipes.map((recipe) => (
+            <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
+              <View style={styles.recipeImageContainer}>
+                <Text style={styles.recipeEmoji}>{recipe.image}</Text>
+              </View>
+              
+              <View style={styles.recipeInfo}>
+                <Text style={styles.recipeName}>{recipe.name}</Text>
+                
+                <View style={styles.recipeDetails}>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailIcon}>⏱️</Text>
+                    <Text style={styles.detailText}>{recipe.prepTime}</Text>
+                  </View>
+                  
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailIcon}>🔥</Text>
+                    <Text style={styles.detailText}>{recipe.calories} cal</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.difficultyBadge}>
+                  <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -17,16 +146,115 @@ export default function RecipeTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: 20,
+    paddingBottom: 10,
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 14,
+    opacity: 0.6,
   },
   separator: {
-    marginVertical: 30,
+    marginVertical: 20,
     height: 1,
-    width: '80%',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  categoryContainer: {
+    maxHeight: 50,
+    marginBottom: 15,
+  },
+  categoryContent: {
+    paddingHorizontal: 15,
+    gap: 10,
+  },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    marginRight: 10,
+  },
+  categoryChipActive: {
+    backgroundColor: '#007AFF',
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  categoryTextActive: {
+    color: '#FFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  recipeGrid: {
+    padding: 15,
+    gap: 15,
+  },
+  recipeCard: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 15,
+    backgroundColor: 'transparent',
+  },
+  recipeImageContainer: {
+    height: 150,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  recipeEmoji: {
+    fontSize: 64,
+  },
+  recipeInfo: {
+    padding: 15,
+    backgroundColor: 'rgba(128, 128, 128, 0.05)',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  recipeName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  recipeDetails: {
+    flexDirection: 'row',
+    gap: 15,
+    marginBottom: 10,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  detailIcon: {
+    fontSize: 14,
+  },
+  detailText: {
+    fontSize: 13,
+    opacity: 0.7,
+  },
+  difficultyBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  difficultyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });
