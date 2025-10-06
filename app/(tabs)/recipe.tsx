@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView } from 'react-native';
 import { Text, View } from '@/components/Themed';
 
 const SAMPLE_RECIPES = [
@@ -155,21 +155,21 @@ export default function RecipeTabScreen() {
                 <View style={styles.recipeInfo}>
                   <Text style={styles.recipeName}>{recipe.name}</Text>
                   
-                  <View style={styles.recipeDetails}>
-                    <View style={styles.detailItem}>
+                  <RNView style={styles.recipeDetails}>
+                    <RNView style={styles.detailItem}>
                       <Text style={styles.detailIcon}>⏱️</Text>
                       <Text style={styles.detailText}>{recipe.prepTime}</Text>
-                    </View>
+                    </RNView>
                     
-                    <View style={styles.detailItem}>
+                    <RNView style={styles.detailItem}>
                       <Text style={styles.detailIcon}>🔥</Text>
                       <Text style={styles.detailText}>{recipe.calories} cal</Text>
-                    </View>
+                    </RNView>
                     
-                    <View style={styles.difficultyBadge}>
+                    <RNView style={styles.difficultyBadge}>
                       <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
-                    </View>
-                  </View>
+                    </RNView>
+                  </RNView>
                 </View>
               </TouchableOpacity>
             ))
@@ -306,7 +306,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 15,
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
   },
   detailItem: {
     flexDirection: 'row',
