@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView } from 'react-native';
 import { Text, View } from '@/components/Themed';
+import { Colors } from '@/constants/globalStyles';
 
 const SAMPLE_RECIPES = [
   {
