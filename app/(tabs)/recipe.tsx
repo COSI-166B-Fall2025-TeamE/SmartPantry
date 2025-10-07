@@ -1,6 +1,7 @@
 import { Text, View } from '@/components/Themed';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Colors } from '@/constants/globalStyles';
 
 const SAMPLE_RECIPES = [
   {
@@ -66,7 +67,6 @@ const SAMPLE_RECIPES = [
 ];
 
 const CATEGORIES = ['All', 'Healthy', 'Pasta', 'Vegetarian', 'Mexican', 'Seafood'];
-import { Colors } from './globalStyles';
 
 export default function RecipeTabScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
