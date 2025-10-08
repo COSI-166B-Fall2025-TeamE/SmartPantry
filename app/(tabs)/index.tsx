@@ -1,11 +1,13 @@
-import { ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 import EditScreenInfo from '@/components/EditScreenInfo';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useCameraPermissions } from 'expo-camera';
+import { Link } from 'expo-router';
 import { useState } from 'react';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 
 type FoodItem = {
@@ -15,6 +17,10 @@ type FoodItem = {
 }
 
 export default function TabOneScreen() {
+
+  const [permission, requestPermission] = useCameraPermissions();
+  const isPermissionGranted = Boolean(permission?.granted);
+
   const [items] = useState<FoodItem[]>([
   { id: '1', name: 'Bananas', expirationDate: '09/30/2025' },
   { id: '2', name: 'Milk', expirationDate: '10/08/2025' },
@@ -51,7 +57,7 @@ export default function TabOneScreen() {
         </View>
 
         {/* Scan Barcode Card */}
-        <TouchableOpacity style={styles.scanCard}>
+        <Pressable style={styles.scanCard} onPress={requestPermission} disabled={isPermissionGranted}>
           <View style={[styles.scanContent, { backgroundColor: Colors.primaryCard }]}>
             <View style={{ backgroundColor: Colors.primaryCard }}>
               <Text style={styles.scanTitle}>Scan A Barcode</Text>
@@ -67,7 +73,14 @@ export default function TabOneScreen() {
               <View style={[styles.cornerBR, { backgroundColor: Colors.primaryCard }]} />
             </View>
           </View>
-        </TouchableOpacity>
+        </Pressable>
+                {isPermissionGranted && (
+                  <Link href="/scan" asChild>
+                    <Pressable>
+                      <Text style={styles.linkText}>CONTINUE SCANNING.</Text>
+                    </Pressable>
+                  </Link>
+                )}
 
         {/* OR Divider */}
         <View style={styles.dividerContainer}>
@@ -189,6 +202,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.mainText,
     padding: 24,
   },
+  barcodeCard: {
+    backgroundColor: Colors.primaryCard,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: Colors.mainText,
+    padding: 24,
+  },
   scanContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -262,6 +282,12 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: Colors.mainText,
     borderRadius: 2,
+  },
+  linkText: {
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.linkText,
   },
 
 
