@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useColorScheme } from 'react-native'
 import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
 
@@ -69,6 +71,7 @@ const SAMPLE_RECIPES = [
 const CATEGORIES = ['All', 'Healthy', 'Pasta', 'Vegetarian', 'Mexican', 'Seafood'];
 
 export default function RecipeTabScreen() {
+  const colorScheme = useColorScheme();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,107 +91,116 @@ export default function RecipeTabScreen() {
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Recipe Recommendations</Text>
-        <Text style={styles.subtitle}>Discover delicious meals</Text>
-      </View>
-      
-      {/* <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" /> */}
-      
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by recipe or ingredient"
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchQuery !== '' && (
-          <TouchableOpacity 
-            style={styles.clearButton}
-            onPress={() => setSearchQuery('')}
-          >
-            <Text style={styles.clearButtonText}>✕</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      {/* Category Filter */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryContainer}
-        contentContainerStyle={styles.categoryContent}
-      >
-        {CATEGORIES.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryChip,
-              selectedCategory === category && styles.categoryChipActive
-            ]}
-            onPress={() => setSelectedCategory(category)}
-          >
-            <Text style={[
-              styles.categoryText,
-              selectedCategory === category && styles.categoryTextActive
-            ]}>
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      {/* Recipe List */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.recipeGrid}>
-          {filteredRecipes.length > 0 ? (
-            filteredRecipes.map((recipe) => (
-              <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
-                <View style={styles.recipeImageContainer}>
-                  <Text style={styles.recipeEmoji}>{recipe.image}</Text>
-                </View>
-                
-                <View style={styles.recipeInfo}>
-                  <Text style={styles.recipeName}>{recipe.name}</Text>
-                  
-                  <RNView style={styles.recipeDetails}>
-                    <RNView style={styles.detailItem}>
-                      <Text style={styles.detailIcon}>⏱️</Text>
-                      <Text style={styles.detailText}>{recipe.prepTime}</Text>
-                    </RNView>
-                    
-                    <RNView style={styles.detailItem}>
-                      <Text style={styles.detailIcon}>🔥</Text>
-                      <Text style={styles.detailText}>{recipe.calories} cal</Text>
-                    </RNView>
-                    
-                    <RNView style={styles.difficultyBadge}>
-                      <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
-                    </RNView>
-                  </RNView>
-                </View>
-              </TouchableOpacity>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No recipes found</Text>
-              <Text style={styles.emptyStateSubtext}>
-                Try a different search term or category
-              </Text>
-            </View>
+    <SafeAreaView 
+      style={[
+        styles.safeArea, 
+        { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+      ]} 
+      edges={['top', 'left', 'right']}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Recipe Recommendations</Text>
+          <Text style={styles.subtitle}>Discover delicious meals</Text>
+        </View>
+        
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by recipe or ingredient"
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery !== '' && (
+            <TouchableOpacity 
+              style={styles.clearButton}
+              onPress={() => setSearchQuery('')}
+            >
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
           )}
         </View>
-      </ScrollView>
-    </View>
+        
+        {/* Category Filter */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryContainer}
+          contentContainerStyle={styles.categoryContent}
+        >
+          {CATEGORIES.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryChip,
+                selectedCategory === category && styles.categoryChipActive
+              ]}
+              onPress={() => setSelectedCategory(category)}
+            >
+              <Text style={[
+                styles.categoryText,
+                selectedCategory === category && styles.categoryTextActive
+              ]}>
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Recipe List */}
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.recipeGrid}>
+            {filteredRecipes.length > 0 ? (
+              filteredRecipes.map((recipe) => (
+                <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
+                  <View style={styles.recipeImageContainer}>
+                    <Text style={styles.recipeEmoji}>{recipe.image}</Text>
+                  </View>
+                  
+                  <View style={styles.recipeInfo}>
+                    <Text style={styles.recipeName}>{recipe.name}</Text>
+                    
+                    <RNView style={styles.recipeDetails}>
+                      <RNView style={styles.detailItem}>
+                        <Text style={styles.detailIcon}>⏱️</Text>
+                        <Text style={styles.detailText}>{recipe.prepTime}</Text>
+                      </RNView>
+                      
+                      <RNView style={styles.detailItem}>
+                        <Text style={styles.detailIcon}>🔥</Text>
+                        <Text style={styles.detailText}>{recipe.calories} cal</Text>
+                      </RNView>
+                      
+                      <RNView style={styles.difficultyBadge}>
+                        <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
+                      </RNView>
+                    </RNView>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No recipes found</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  Try a different search term or category
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -205,12 +217,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     opacity: 0.6,
-  },
-  separator: {
-    marginVertical: 20,
-    height: 1,
-    width: '90%',
-    alignSelf: 'center',
   },
   searchContainer: {
     marginHorizontal: 15,
