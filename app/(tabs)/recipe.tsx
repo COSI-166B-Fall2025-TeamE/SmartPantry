@@ -4,6 +4,7 @@ import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView, Ac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
+import { useRouter } from 'expo-router';
 
 interface Recipe {
   idMeal: string;
@@ -29,6 +30,7 @@ const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork'
 
 export default function RecipeTabScreen() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -245,7 +247,11 @@ export default function RecipeTabScreen() {
               {displayedRecipes.length > 0 ? (
                 displayedRecipes.map((recipe) => {
                   return (
-                    <TouchableOpacity key={recipe.idMeal} style={styles.recipeCard}>
+                    <TouchableOpacity 
+                      key={recipe.idMeal} 
+                      style={styles.recipeCard}
+                      onPress={() => router.push(`/recipe/${recipe.idMeal}`)}
+                    >
                       <View style={styles.recipeImageContainer}>
                         <Image 
                           source={{ uri: recipe.strMealThumb }}
