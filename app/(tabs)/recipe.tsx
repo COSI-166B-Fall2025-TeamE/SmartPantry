@@ -1,94 +1,173 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native'
-import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
 
-const SAMPLE_RECIPES = [
-  {
-    id: 1,
-    name: 'Grilled Chicken Salad',
-    prepTime: '25 mins',
-    difficulty: 'Easy',
-    calories: 320,
-    category: 'Healthy',
-    image: '🥗',
-    ingredients: ['Chicken', 'Lettuce', 'Tomatoes', 'Olive Oil']
-  },
-  {
-    id: 2,
-    name: 'Spaghetti Carbonara',
-    prepTime: '30 mins',
-    difficulty: 'Medium',
-    calories: 580,
-    category: 'Pasta',
-    image: '🍝',
-    ingredients: ['Pasta', 'Eggs', 'Bacon', 'Parmesan']
-  },
-  {
-    id: 3,
-    name: 'Vegetable Stir Fry',
-    prepTime: '20 mins',
-    difficulty: 'Easy',
-    calories: 240,
-    category: 'Vegetarian',
-    image: '🥘',
-    ingredients: ['Broccoli', 'Carrots', 'Soy Sauce', 'Garlic']
-  },
-  {
-    id: 4,
-    name: 'Beef Tacos',
-    prepTime: '35 mins',
-    difficulty: 'Easy',
-    calories: 450,
-    category: 'Mexican',
-    image: '🌮',
-    ingredients: ['Ground Beef', 'Tortillas', 'Cheese', 'Lettuce']
-  },
-  {
-    id: 5,
-    name: 'Salmon Teriyaki',
-    prepTime: '40 mins',
-    difficulty: 'Medium',
-    calories: 380,
-    category: 'Seafood',
-    image: '🐟',
-    ingredients: ['Salmon', 'Teriyaki Sauce', 'Rice', 'Vegetables']
-  },
-  {
-    id: 6,
-    name: 'Mushroom Risotto',
-    prepTime: '45 mins',
-    difficulty: 'Hard',
-    calories: 420,
-    category: 'Vegetarian',
-    image: '🍄',
-    ingredients: ['Arborio Rice', 'Mushrooms', 'Parmesan', 'White Wine']
-  }
-];
+interface Recipe {
+  idMeal: string;
+  strMeal: string;
+  strDrinkAlternate: string | null;
+  strCategory: string;
+  strArea: string;
+  strInstructions: string;
+  strMealThumb: string;
+  strTags: string | null;
+  strYoutube: string;
+  ingredients: Array<{
+    ingredient: string;
+    measure: string;
+  }>;
+  strSource: string | null;
+  strImageSource: string | null;
+  strCreativeCommonsConfirmed: string | null;
+  dateModified: string | null;
+}
 
-const CATEGORIES = ['All', 'Healthy', 'Pasta', 'Vegetarian', 'Mexican', 'Seafood'];
+const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
 
 export default function RecipeTabScreen() {
   const colorScheme = useColorScheme();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Filter recipes by category and search query
-  const filteredRecipes = SAMPLE_RECIPES.filter(recipe => {
-    // Category filter
-    const matchesCategory = selectedCategory === 'All' || recipe.category === selectedCategory;
-    
-    // Search filter (search in recipe name and ingredients)
-    const matchesSearch = searchQuery === '' || 
-      recipe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      recipe.ingredients.some(ingredient => 
-        ingredient.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    
-    return matchesCategory && matchesSearch;
-  });
+  // Fetch recipes from TheMealDB API
+  useEffect(() => {
+    fetchRecipes();
+  }, [selectedCategory]);
+
+  const fetchRecipes = async () => {
+    setLoading(true);
+    try {
+      if (selectedCategory === 'All') {
+        // Fetch random meals for "All" category
+        const randomMeals = await Promise.all(
+          Array.from({ length: 12 }, () => 
+            fetch('https://www.themealdb.com/api/json/v1/1/random.php')
+              .then(res => res.json())
+          )
+        );
+        
+        const formattedRecipes = randomMeals
+          .filter(result => result.meals && result.meals[0])
+          .map(result => formatRecipe(result.meals[0]));
+        
+        // Remove duplicates based on idMeal
+        const uniqueRecipes = Array.from(
+          new Map(formattedRecipes.map(recipe => [recipe.idMeal, recipe])).values()
+        );
+        
+        setRecipes(uniqueRecipes);
+      } else {
+        // Fetch specific category
+        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`);
+        const data = await response.json();
+        
+        if (data.meals) {
+          // Fetch full details for each meal (limit to 12 for performance)
+          const detailedMeals = await Promise.all(
+            data.meals.slice(0, 12).map((meal: any) => 
+              fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
+                .then(res => res.json())
+            )
+          );
+          
+          const formattedRecipes = detailedMeals
+            .filter(result => result.meals && result.meals[0])
+            .map(result => formatRecipe(result.meals[0]));
+          
+          setRecipes(formattedRecipes);
+        } else {
+          setRecipes([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+      setRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatRecipe = (meal: any): Recipe => {
+    // Extract ingredients and measures from the meal object
+    const ingredients = [];
+    for (let i = 1; i <= 20; i++) {
+      const ingredient = meal[`strIngredient${i}`];
+      const measure = meal[`strMeasure${i}`];
+      
+      // Only add if ingredient exists and is not empty/null
+      if (ingredient && ingredient.trim() && ingredient !== 'null') {
+        ingredients.push({
+          ingredient: ingredient.trim(),
+          measure: measure && measure.trim() && measure !== 'null' ? measure.trim() : '',
+        });
+      }
+    }
+
+    return {
+      idMeal: meal.idMeal,
+      strMeal: meal.strMeal,
+      strDrinkAlternate: meal.strDrinkAlternate,
+      strCategory: meal.strCategory,
+      strArea: meal.strArea,
+      strInstructions: meal.strInstructions,
+      strMealThumb: meal.strMealThumb,
+      strTags: meal.strTags,
+      strYoutube: meal.strYoutube,
+      ingredients,
+      strSource: meal.strSource,
+      strImageSource: meal.strImageSource,
+      strCreativeCommonsConfirmed: meal.strCreativeCommonsConfirmed,
+      dateModified: meal.dateModified,
+    };
+  };
+
+  // Search recipes by name using API
+  const handleSearch = async (query: string) => {
+    if (query.length >= 3) {
+      setLoading(true);
+      try {
+        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`);
+        const data = await response.json();
+        
+        if (data.meals) {
+          const formattedRecipes = data.meals.map(formatRecipe);
+          setRecipes(formattedRecipes);
+        } else {
+          setRecipes([]);
+        }
+      } catch (error) {
+        console.error('Error searching recipes:', error);
+      } finally {
+        setLoading(false);
+      }
+    } else if (query.length === 0) {
+      // Reset to category view when search is cleared
+      fetchRecipes();
+    }
+  };
+
+  // Debounce search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.length >= 3 || searchQuery.length === 0) {
+        handleSearch(searchQuery);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Filter recipes locally for shorter queries
+  const displayedRecipes = searchQuery.length > 0 && searchQuery.length < 3
+    ? recipes.filter(recipe => 
+        recipe.strMeal.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : recipes;
 
   return (
     <SafeAreaView 
@@ -108,7 +187,7 @@ export default function RecipeTabScreen() {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by recipe or ingredient"
+            placeholder="Search by recipe name (min 3 chars)"
             placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -139,7 +218,10 @@ export default function RecipeTabScreen() {
                 styles.categoryChip,
                 selectedCategory === category && styles.categoryChipActive
               ]}
-              onPress={() => setSelectedCategory(category)}
+              onPress={() => {
+                setSelectedCategory(category);
+                setSearchQuery(''); // Clear search when changing category
+              }}
             >
               <Text style={[
                 styles.categoryText,
@@ -152,46 +234,56 @@ export default function RecipeTabScreen() {
         </ScrollView>
 
         {/* Recipe List */}
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          <View style={styles.recipeGrid}>
-            {filteredRecipes.length > 0 ? (
-              filteredRecipes.map((recipe) => (
-                <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
-                  <View style={styles.recipeImageContainer}>
-                    <Text style={styles.recipeEmoji}>{recipe.image}</Text>
-                  </View>
-                  
-                  <View style={styles.recipeInfo}>
-                    <Text style={styles.recipeName}>{recipe.name}</Text>
-                    
-                    <RNView style={styles.recipeDetails}>
-                      <RNView style={styles.detailItem}>
-                        <Text style={styles.detailIcon}>⏱️</Text>
-                        <Text style={styles.detailText}>{recipe.prepTime}</Text>
-                      </RNView>
-                      
-                      <RNView style={styles.detailItem}>
-                        <Text style={styles.detailIcon}>🔥</Text>
-                        <Text style={styles.detailText}>{recipe.calories} cal</Text>
-                      </RNView>
-                      
-                      <RNView style={styles.difficultyBadge}>
-                        <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
-                      </RNView>
-                    </RNView>
-                  </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No recipes found</Text>
-                <Text style={styles.emptyStateSubtext}>
-                  Try a different search term or category
-                </Text>
-              </View>
-            )}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#371B34" />
+            <Text style={styles.loadingText}>Loading recipes...</Text>
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <View style={styles.recipeGrid}>
+              {displayedRecipes.length > 0 ? (
+                displayedRecipes.map((recipe) => {
+                  return (
+                    <TouchableOpacity key={recipe.idMeal} style={styles.recipeCard}>
+                      <View style={styles.recipeImageContainer}>
+                        <RNView style={styles.imagePlaceholder}>
+                          <Text style={styles.imagePlaceholderText}>🍽️</Text>
+                        </RNView>
+                      </View>
+                      
+                      <View style={styles.recipeInfo}>
+                        <Text style={styles.recipeName} numberOfLines={2}>
+                          {recipe.strMeal}
+                        </Text>
+                        
+                        <RNView style={styles.recipeDetails}>
+                          <RNView style={styles.detailItem}>
+                            <Text style={styles.detailIcon}>🌍</Text>
+                            <Text style={styles.detailText}>{recipe.strArea}</Text>
+                          </RNView>
+                          
+                          <RNView style={styles.categoryBadge}>
+                            <Text style={styles.categoryBadgeText}>{recipe.strCategory}</Text>
+                          </RNView>
+                        </RNView>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No recipes found</Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    {searchQuery.length > 0 && searchQuery.length < 3 
+                      ? 'Type at least 3 characters to search'
+                      : 'Try a different search term or category'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -274,6 +366,16 @@ const styles = StyleSheet.create({
   categoryTextActive: {
     color: '#FFF',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    opacity: 0.6,
+  },
   scrollView: {
     flex: 1,
   },
@@ -295,7 +397,14 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
-  recipeEmoji: {
+  imagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+  },
+  imagePlaceholderText: {
     fontSize: 64,
   },
   recipeInfo: {
@@ -326,13 +435,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     opacity: 0.7,
   },
-  difficultyBadge: {
+  categoryBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
-  difficultyText: {
+  categoryBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#007AFF',
@@ -351,5 +460,7 @@ const styles = StyleSheet.create({
   emptyStateSubtext: {
     fontSize: 14,
     opacity: 0.4,
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 });
