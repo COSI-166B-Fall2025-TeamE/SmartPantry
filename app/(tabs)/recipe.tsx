@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native'
-import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView, ActivityIndicator } from 'react-native';
+import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
@@ -247,9 +247,11 @@ export default function RecipeTabScreen() {
                   return (
                     <TouchableOpacity key={recipe.idMeal} style={styles.recipeCard}>
                       <View style={styles.recipeImageContainer}>
-                        <RNView style={styles.imagePlaceholder}>
-                          <Text style={styles.imagePlaceholderText}>🍽️</Text>
-                        </RNView>
+                        <Image 
+                          source={{ uri: recipe.strMealThumb }}
+                          style={styles.recipeImage}
+                          resizeMode="cover"
+                        />
                       </View>
                       
                       <View style={styles.recipeInfo}>
@@ -396,16 +398,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
+    overflow: 'hidden',
   },
-  imagePlaceholder: {
+  recipeImage: {
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
-  },
-  imagePlaceholderText: {
-    fontSize: 64,
   },
   recipeInfo: {
     padding: 15,
