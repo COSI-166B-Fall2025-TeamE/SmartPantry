@@ -1,6 +1,7 @@
 import ExpirationItems from '@/components/ExpirationItems';
 import { Text, View } from '@/components/Themed';
 import { expirationItems } from '@/data/ItemsList';
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
@@ -78,11 +79,20 @@ export default function ExpirationTabScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
       <TouchableOpacity 
         activeOpacity={1} 
-        style={styles.container} 
+        style={styles.flexContainer} 
         onPress={handleScreenPress}
       >
       <View style={styles.header}>
           <Text style={styles.title}>🗓 Expiration Dates Tracker</Text>
+          <TouchableOpacity 
+              style={styles.searchIcon} 
+              onPress={(e) => {
+                e.stopPropagation(); 
+                setShowSearch(!showSearch);
+              }}
+            >
+              <Ionicons name="search" size={24} color="gray" />
+          </TouchableOpacity>      
       </View>
 
       {showSearch && (
@@ -218,8 +228,15 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     width: '90%',
+    maxWidth: 400,
     marginTop: 10,
     position: 'relative',
+    alignSelf: 'center',
+  },
+   flexContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
   },
   searchInput: {
     height: 40,
