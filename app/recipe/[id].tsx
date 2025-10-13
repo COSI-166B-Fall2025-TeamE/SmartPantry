@@ -1,0 +1,412 @@
+import { useState, useEffect } from 'react';
+import { useColorScheme } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StyleSheet, ScrollView, TouchableOpacity, View as RNView, ActivityIndicator, Image, Linking } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, View } from '@/components/Themed';
+import { Ionicons } from '@expo/vector-icons';
+
+interface Recipe {
+  idMeal: string;
+  strMeal: string;
+  strDrinkAlternate: string | null;
+  strCategory: string;
+  strArea: string;
+  strInstructions: string;
+  strMealThumb: string;
+  strTags: string | null;
+  strYoutube: string;
+  ingredients: Array<{
+    ingredient: string;
+    measure: string;
+  }>;
+  strSource: string | null;
+  strImageSource: string | null;
+  strCreativeCommonsConfirmed: string | null;
+  dateModified: string | null;
+}
+
+export default function RecipeDetailScreen() {
+  const colorScheme = useColorScheme();
+  const router = useRouter();
+  const { id } = useLocalSearchParams();
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (id) {
+      fetchRecipeDetails();
+    }
+  }, [id]);
+
+  const fetchRecipeDetails = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`);
+      const data = await response.json();
+      
+      if (data.meals && data.meals[0]) {
+        const formattedRecipe = formatRecipe(data.meals[0]);
+        setRecipe(formattedRecipe);
+      }
+    } catch (error) {
+      console.error('Error fetching recipe details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatRecipe = (meal: any): Recipe => {
+    const ingredients = [];
+    for (let i = 1; i <= 20; i++) {
+      const ingredient = meal[`strIngredient${i}`];
+      const measure = meal[`strMeasure${i}`];
+      
+      if (ingredient && ingredient.trim() && ingredient !== 'null') {
+        ingredients.push({
+          ingredient: ingredient.trim(),
+          measure: measure && measure.trim() && measure !== 'null' ? measure.trim() : '',
+        });
+      }
+    }
+
+    return {
+      idMeal: meal.idMeal,
+      strMeal: meal.strMeal,
+      strDrinkAlternate: meal.strDrinkAlternate,
+      strCategory: meal.strCategory,
+      strArea: meal.strArea,
+      strInstructions: meal.strInstructions,
+      strMealThumb: meal.strMealThumb,
+      strTags: meal.strTags,
+      strYoutube: meal.strYoutube,
+      ingredients,
+      strSource: meal.strSource,
+      strImageSource: meal.strImageSource,
+      strCreativeCommonsConfirmed: meal.strCreativeCommonsConfirmed,
+      dateModified: meal.dateModified,
+    };
+  };
+
+  const openYouTube = () => {
+    if (recipe?.strYoutube) {
+      Linking.openURL(recipe.strYoutube);
+    }
+  };
+
+  const openSource = () => {
+    if (recipe?.strSource) {
+      Linking.openURL(recipe.strSource);
+    }
+  };
+
+  const getTags = (strTags: string | null): string[] => {
+    if (!strTags) return [];
+    return strTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView 
+        style={[
+          styles.safeArea, 
+          { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+        ]} 
+        edges={['top', 'left', 'right']}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#371B34" />
+          <Text style={styles.loadingText}>Loading recipe...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!recipe) {
+    return (
+      <SafeAreaView 
+        style={[
+          styles.safeArea, 
+          { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+        ]} 
+        edges={['top', 'left', 'right']}
+      >
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Recipe not found</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const tags = getTags(recipe.strTags);
+
+  return (
+    <SafeAreaView 
+      style={[
+        styles.safeArea, 
+        { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+      ]} 
+      edges={['top', 'left', 'right']}
+    >
+      <View style={styles.container}>
+        {/* Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={colorScheme === 'dark' ? '#fff' : '#000'} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>Recipe Details</Text>
+          <View style={styles.placeholder} />
+        </View>
+
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Recipe Image */}
+          <Image 
+            source={{ uri: recipe.strMealThumb }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+
+          {/* Recipe Info */}
+          <View style={styles.contentContainer}>
+            <Text style={styles.recipeName}>{recipe.strMeal}</Text>
+
+            {/* Category and Area */}
+            <RNView style={styles.metaContainer}>
+              <RNView style={styles.metaItem}>
+                <Text style={styles.metaIcon}>🌍</Text>
+                <Text style={styles.metaText}>{recipe.strArea}</Text>
+              </RNView>
+              
+              <RNView style={styles.metaItem}>
+                <Text style={styles.metaIcon}>🍽️</Text>
+                <Text style={styles.metaText}>{recipe.strCategory}</Text>
+              </RNView>
+            </RNView>
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <RNView style={styles.tagsContainer}>
+                {tags.map((tag, index) => (
+                  <RNView key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </RNView>
+                ))}
+              </RNView>
+            )}
+
+            {/* Action Buttons */}
+            <RNView style={styles.actionButtons}>
+              {recipe.strYoutube && (
+                <TouchableOpacity style={styles.actionButton} onPress={openYouTube}>
+                  <Text style={styles.actionButtonText}>📹 Watch Video</Text>
+                </TouchableOpacity>
+              )}
+              {recipe.strSource && (
+                <TouchableOpacity style={[styles.actionButton, styles.actionButtonSecondary]} onPress={openSource}>
+                  <Text style={styles.actionButtonTextSecondary}>🔗 Source</Text>
+                </TouchableOpacity>
+              )}
+            </RNView>
+
+            {/* Ingredients Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Ingredients</Text>
+              <View style={styles.ingredientsList}>
+                {recipe.ingredients.map((item, index) => (
+                  <RNView key={index} style={styles.ingredientItem}>
+                    <Text style={styles.ingredientBullet}>•</Text>
+                    <Text style={styles.ingredientText}>
+                      {item.measure} {item.ingredient}
+                    </Text>
+                  </RNView>
+                ))}
+              </View>
+            </View>
+
+            {/* Instructions Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Instructions</Text>
+              <Text style={styles.instructionsText}>{recipe.strInstructions}</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  backIconButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+  },
+  placeholder: {
+    width: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    opacity: 0.6,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    opacity: 0.6,
+  },
+  backButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#371B34',
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  heroImage: {
+    width: '100%',
+    height: 300,
+  },
+  contentContainer: {
+    padding: 20,
+  },
+  recipeName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  metaContainer: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 15,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaIcon: {
+    fontSize: 16,
+  },
+  metaText: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 15,
+  },
+  tag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 149, 0, 0.1)',
+  },
+  tagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF9500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 30,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#371B34',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  actionButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#371B34',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  actionButtonTextSecondary: {
+    color: '#371B34',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  section: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  ingredientsList: {
+    gap: 10,
+  },
+  ingredientItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  ingredientBullet: {
+    fontSize: 16,
+    opacity: 0.6,
+    marginTop: 2,
+  },
+  ingredientText: {
+    fontSize: 16,
+    lineHeight: 24,
+    flex: 1,
+  },
+  instructionsText: {
+    fontSize: 16,
+    lineHeight: 26,
+    opacity: 0.8,
+  },
+});
