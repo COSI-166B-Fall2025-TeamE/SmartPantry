@@ -17,5 +17,6 @@ export const expirationItems: ExpirationItem[] = [
   {  id: '10', name: 'Cheese', expirationDate: '2025-11-18' },
   {  id: '11', name: 'Cucumber', expirationDate: '2025-10-08' },
   {  id: '12', name: 'Eggplant', expirationDate: '2025-10-10' },
-  {  id: '13', name: 'Grapes', expirationDate: '2025-10-07' }
+  {  id: '13', name: 'Grapes', expirationDate: '2025-10-07' },
+  {  id: '14', name: 'Donuts', expirationDate: '2025-10-13' }
 ];
