@@ -207,6 +207,7 @@ export default function ExpirationTabScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: '#fff',
     paddingTop: 50,
     alignItems: 'center',
