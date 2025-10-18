@@ -36,7 +36,15 @@ export default function TabOneScreen() {
 
   const [items, setItems] = useState<Item[]>([]);
 
-  const userName = 'Promise';
+  //const userNames = [
+  //'Alex', 'Bailey', 'Casey', 'Drew', 'Emery', 'Finley', 'Harley', 'Indigo',
+  //'Jamie', 'Kai', 'Logan', 'Morgan', 'Noah', 'Parker', 'Quinn', 'Riley',
+  //'Sage', 'Taylor', 'Jordan', 'Avery', 'Reese', 'Skyler', 'Phoenix', 'River', 'Emerson'
+  //];
+  //const userName = userNames[Math.floor(Math.random() * userNames.length)];
+
+  //const userName = 'Promise';
+  const userName = 'User';
   const months = [
   'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
