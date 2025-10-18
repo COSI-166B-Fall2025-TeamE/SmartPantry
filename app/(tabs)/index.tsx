@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
@@ -107,6 +108,27 @@ export default function TabOneScreen() {
                   </TouchableOpacity>
                   </Link>
                   
+                  <TouchableOpacity 
+                    style={styles.sidebarItem}
+                    onPress={async () => {
+                      try {
+                        const storedItems = await AsyncStorage.getItem('groceryList');
+                        if (storedItems) {
+                          const items = JSON.parse(storedItems);
+                          const itemsList = items.map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`).join('\n');
+                          alert(`Grocery List:\n\n${itemsList || 'No items'}`);
+                        } else {
+                          alert('Grocery list is empty');
+                        }
+                      } catch (error) {
+                        alert('Failed to load grocery list');
+                      }
+                      setIsSidebarVisible(false);
+                    }}
+                  >
+                    <Text style={styles.sidebarItemText}>Show current shopping list</Text>
+                  </TouchableOpacity>
+
                   <Link href="/grocery" asChild>
                   <TouchableOpacity 
                       style={styles.sidebarItem}
@@ -123,6 +145,7 @@ export default function TabOneScreen() {
               </View>
             </TouchableOpacity>
           )}
+        
         {/* Welcome Message */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>
@@ -171,8 +194,6 @@ export default function TabOneScreen() {
             <Ionicons name="finger-print-outline" size={28} color={Colors.secondaryText} />
           </View>
         </TouchableOpacity>
-
-        
         
         {/* Expiring Soon Section */}
       <View style={styles.expiringSoonHeader}>
