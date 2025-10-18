@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -11,50 +13,54 @@ import {
   View,
 } from 'react-native';
 
-const getSuggestions = (currentItems: Array<{ id: string; text: string; completed: boolean }>) => {
-  const allSuggestions = [
-    { name: 'Milk', expiry: '7 days', expiryDays: 7 },
-    { name: 'Eggs', expiry: '3-5 weeks', expiryDays: 28 },
-    { name: 'Bread', expiry: '5-7 days', expiryDays: 6 },
-    { name: 'Butter', expiry: '1-3 months', expiryDays: 60 },
-    { name: 'Cheese', expiry: '3-4 weeks', expiryDays: 25 },
-    { name: 'Chicken', expiry: '1-2 days', expiryDays: 1.5 },
-    { name: 'Beef', expiry: '3-5 days', expiryDays: 4 },
-    { name: 'Rice', expiry: '4-5 years', expiryDays: 1642 },
-    { name: 'Pasta', expiry: '1-2 years', expiryDays: 547 },
-    { name: 'Tomatoes', expiry: '1 week', expiryDays: 7 },
-    { name: 'Lettuce', expiry: '7-10 days', expiryDays: 8.5 },
-    { name: 'Apples', expiry: '4-6 weeks', expiryDays: 35 },
-    { name: 'Bananas', expiry: '5-7 days', expiryDays: 6 },
-    { name: 'Oranges', expiry: '3-4 weeks', expiryDays: 25 },
-    { name: 'Coffee', expiry: '2-3 weeks', expiryDays: 17 },
-    { name: 'Tea', expiry: '6-12 months', expiryDays: 270 },
-    { name: 'Sugar', expiry: 'Indefinite', expiryDays: 3650 },
-    { name: 'Salt', expiry: 'Indefinite', expiryDays: 3650 },
-    { name: 'Pepper', expiry: '2-3 years', expiryDays: 912 },
-    { name: 'Olive Oil', expiry: '18-24 months', expiryDays: 630 }
-  ];
-  
-  const currentItemTexts = currentItems.map(item => item.text.toLowerCase());
-  return allSuggestions.filter(
-    suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
-  ).slice(0, 6);
+
+import { getExpiryColor, getSuggestions } from '@/data/suggestions';
+
+type GroceryItem = {
+  id: string;
+  text: string;
+  completed: boolean;
 };
 
-const getExpiryColor = (expiryDays: number) => {
-  if (expiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
-  if (expiryDays <= 5) return '#F44336'; // Red for 3-5 days
-  if (expiryDays <= 7) return '#FF5722'; // Deep orange for 6-7 days
-  if (expiryDays <= 14) return '#FF9800'; // Orange for 1-2 weeks
-  if (expiryDays <= 30) return '#FFC107'; // Amber for 2-4 weeks
-  if (expiryDays <= 90) return '#8BC34A'; // Light green for 1-3 months
-  return '#4CAF50'; // Green for 3+ months
+type Suggestion = {
+  name: string;
+  expiry: string;
+  expiryDays: number;
 };
 
 export default function GroceryList() {
   const [items, setItems] = useState<Array<{ id: string; text: string; completed: boolean }>>([]);
   const [inputText, setInputText] = useState('');
   const [suggestions, setSuggestions] = useState<Array<{ name: string; expiry: string; expiryDays: number }>>([]);
+
+  useEffect(() => {
+    loadGroceryList();
+  }, []);
+
+  useEffect(() => {
+    setSuggestions(getSuggestions(items));
+    saveGroceryList(items);
+  }, [items]);
+
+  const loadGroceryList = async () => {
+    try {
+      const storedItems = await AsyncStorage.getItem('groceryList');
+      if (storedItems) {
+        setItems(JSON.parse(storedItems));
+      }
+    } catch (error) {
+      console.error('Error loading grocery list:', error);
+    }
+  };
+
+  const saveGroceryList = async (itemsToSave: GroceryItem[]) => {
+    try {
+      await AsyncStorage.setItem('groceryList', JSON.stringify(itemsToSave));
+    } catch (error) {
+      console.error('Error saving grocery list:', error);
+    }
+  };
+
 
   React.useEffect(() => {
     setSuggestions(getSuggestions(items));

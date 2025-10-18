@@ -1,0 +1,86 @@
+       
+        <View style={styles.expiringSoonHeader}>
+          <Text style={styles.expiringSoonTitle}>Expiring Soon</Text>
+          <Text style={styles.itemCount}>{items.length} items</Text>
+        </View>
+
+       {/*<ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.itemsScroll}
+          contentContainerStyle={styles.itemsContainer}
+        >
+          {items.map((item) => (
+            <View key={item.id} style={styles.foodCard}>
+              <View style={styles.foodImagePlaceholder} />
+              <Text style={styles.foodName}>{item.name}</Text>
+              <Text style={styles.foodDate}>{item.expirationDate}</Text>
+            </View>
+          ))}
+        </ScrollView>*/}
+
+  itemsScroll: {
+    paddingLeft: 24,
+  },
+    itemsContainer: {
+    paddingRight: 24,
+    paddingBottom: 16,
+  },
+
+    foodCard: {
+    width: 140,
+    marginRight: 16,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+
+  {/* Food Items Grid */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.itemsScroll}
+          contentContainerStyle={styles.itemsContainer}
+        >
+          {expirationItems && expirationItems.length > 0 ? (
+            expirationItems.map((item, index) => {
+              console.log(`Rendering item ${index}:`, item);
+              return (
+                <View key={item.id} style={[styles.foodCard, { borderWidth: 1, borderColor: '#FF0000' }]}>
+                  <View style={styles.foodImagePlaceholder} />
+                  <Text style={[styles.foodName, { color: '#000000' }]}>{item.name || 'No name'}</Text>
+                  <Text style={[styles.foodDate, { color: '#666666' }]}>{item.expirationDate || 'No date'}</Text>
+                </View>
+              );
+            })
+          ) : (
+            <View style={[styles.foodCard, { alignItems: 'center', justifyContent: 'center', width: 300 }]}>
+              <Text style={{ color: Colors.secondaryText }}>No items found</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        <EditScreenInfo path="app/(tabs)/index.tsx" />
+
+        <View key={item.id}  style={styles.foodCard}>
+              <View style={styles.foodImagePlaceholder} />
+              <Text style={styles.foodName}>{item.name}</Text>
+              <Text style={styles.foodDate}>{item.expirationDate}</Text>
+            </View>
+
+
+
+const getExpiryColor = (expiryDays: number) => {
+  if (expiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
+  if (expiryDays <= 5) return '#F44336'; // Red for 3-5 days
+  if (expiryDays <= 7) return '#FF5722'; // Deep orange for 6-7 days
+  if (expiryDays <= 14) return '#FF9800'; // Orange for 1-2 weeks
+  if (expiryDays <= 30) return '#FFC107'; // Amber for 2-4 weeks
+  if (expiryDays <= 90) return '#8BC34A'; // Light green for 1-3 months
+  return '#4CAF50'; // Green for 3+ months
+};
