@@ -1,16 +1,21 @@
 import { Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
 import { Link } from 'expo-router';
-import { useState } from 'react';
+import { useState } from 'react'; //
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 
-type FoodItem = {
+import EditScreenInfo from '@/components/EditScreenInfo';
+import { expirationItems } from '@/data/ItemsList';
+
+
+
+
+interface Item  {
   id: string;
   name: string;
   expirationDate: string;
@@ -20,15 +25,24 @@ export default function TabOneScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const isPermissionGranted = Boolean(permission?.granted);
+  //const [isSidebarVisible, setIsSidebarVisible] = useState(false);
 
-  const [items] = useState<FoodItem[]>([
-  { id: '1', name: 'Bananas', expirationDate: '09/30/2025' },
-  { id: '2', name: 'Milk', expirationDate: '10/08/2025' },
-  { id: '3', name: 'Bread', expirationDate: '10/10/2025' },
-  ]);
+  //const [items] = useState<FoodItem[]>([
+  //{ id: '1', name: 'Bananas', expirationDate: '09/30/2025' },
+  //{ id: '2', name: 'Milk', expirationDate: '10/08/2025' },
+  //{ id: '3', name: 'Bread', expirationDate: '10/10/2025' },
+  //]);
+
+  const [items, setItems] = useState<Item[]>([]);
 
   const userName = 'Promise';
-  const currentDate = 'SEPTEMBER 29, 2025';
+  const months = [
+  'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+  'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+];
+  const now = new Date();
+  const currentDate = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  //const currentDate = 'SEPTEMBER 29, 2025';
 
   return (
     <SafeAreaProvider>
@@ -97,38 +111,50 @@ export default function TabOneScreen() {
           </View>
         </TouchableOpacity>
 
+        
+        
         {/* Expiring Soon Section */}
-        <View style={styles.expiringSoonHeader}>
-          <Text style={styles.expiringSoonTitle}>Expiring Soon</Text>
-          <Text style={styles.itemCount}>{items.length} items</Text>
-        </View>
+      <View style={styles.expiringSoonHeader}>
+        <Text style={styles.expiringSoonTitle}>Expiring Soon</Text>
+        <Text style={styles.itemCount}>{(expirationItems && expirationItems.length) || 0} items</Text>
+      </View>
+      
+      {/* Food Items Grid */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.itemsScroll}
+        contentContainerStyle={styles.itemsContainer}
+      >
+        {expirationItems && expirationItems.length > 0 ? (
+          expirationItems.map((item) => (
+            <View key={item.id} style={styles.itemContainer}>
+            <View style={styles.itemImagePlaceholder} />
+            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemDate}>{item.expirationDate}</Text>
+          </View>
+          ))
+        ) : (
+          <View style={[styles.foodCard, { alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={{ color: Colors.secondaryText }}>No items found</Text>
+          </View>
+        )}
+      </ScrollView>
+      
+      <EditScreenInfo path="app/(tabs)/index.tsx" />
 
-        {/* Food Items Grid */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.itemsScroll}
-          contentContainerStyle={styles.itemsContainer}
-        >
-          {items.map((item) => (
-            <View key={item.id} style={styles.foodCard}>
-              <View style={styles.foodImagePlaceholder} />
-              <Text style={styles.foodName}>{item.name}</Text>
-              <Text style={styles.foodDate}>{item.expirationDate}</Text>
-            </View>
-          ))}
-        </ScrollView>
-          <EditScreenInfo path="app/(tabs)/index.tsx" />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  
   container: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: Colors.background,
+  flex: 1,
+  alignItems: 'center',
+  backgroundColor: Colors.background,
+  width: '100%',
   },
 
 
@@ -358,13 +384,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.highlightText,
   },
-  itemsScroll: {
+    itemsScroll: {
     paddingLeft: 24,
+    minHeight: 200,
   },
   itemsContainer: {
     paddingRight: 24,
     paddingBottom: 16,
+    minHeight: 200,
   },
+
+  itemContainer: {
+  width: 130,
+  height: 180,
+  backgroundColor: '#FFFFFF',
+  borderRadius: 12,
+  marginRight: 16,
+  padding: 12,
+  alignItems: 'center',
+  justifyContent: 'flex-start',
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 2,
+  },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 3,
+  },
+
+  itemImagePlaceholder: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 40,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+
+  itemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+
+  itemDate: {
+    fontSize: 13,
+    color: '#666666',
+    textAlign: 'center',
+  },
+
+
+
   foodCard: {
     width: 140,
     marginRight: 16,
