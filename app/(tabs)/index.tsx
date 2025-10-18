@@ -25,7 +25,7 @@ export default function TabOneScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const isPermissionGranted = Boolean(permission?.granted);
-  //const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
 
   //const [items] = useState<FoodItem[]>([
   //{ id: '1', name: 'Bananas', expirationDate: '09/30/2025' },
@@ -48,7 +48,10 @@ export default function TabOneScreen() {
     <SafeAreaProvider>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton}>
+        <TouchableOpacity 
+          style={styles.menuButton} 
+          onPress={() => setIsSidebarVisible(true)}
+        >
           <View style={styles.menuIcon}>
             <View style={styles.menuLine} />
             <View style={styles.menuLine} />
@@ -62,6 +65,64 @@ export default function TabOneScreen() {
         </TouchableOpacity>
       </View>
       <SafeAreaView style={styles.container}>
+        {isSidebarVisible && (
+            <TouchableOpacity 
+              style={styles.sidebarOverlay}
+              onPress={() => setIsSidebarVisible(false)}
+              activeOpacity={1}
+            >
+              <View style={styles.sidebar} onStartShouldSetResponder={() => true}>
+                <View style={styles.sidebarHeader}>
+                  <Text style={styles.sidebarTitle}>Menu</Text>
+                  <TouchableOpacity 
+                    style={styles.sidebarCloseButton}
+                    onPress={() => setIsSidebarVisible(false)}
+                  >
+                    <Text style={styles.sidebarCloseText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.sidebarContent}>
+                  <TouchableOpacity style={styles.sidebarItem}
+                  onPress={() => setIsSidebarVisible(false)}
+                  >
+                    <Text style={styles.sidebarItemText}>Home</Text>
+                  </TouchableOpacity>
+                  
+                 <Link href="/expiration" asChild>
+                    <TouchableOpacity 
+                      style={styles.sidebarItem}
+                      onPress={() => setIsSidebarVisible(false)}
+                    >
+                      <Text style={styles.sidebarItemText}>Expiration Dates</Text>
+                    </TouchableOpacity>
+                  </Link>
+                  
+                  <Link href="/grocery" asChild>
+                  <TouchableOpacity 
+                      style={styles.sidebarItem}
+                      onPress={() => setIsSidebarVisible(false)}
+                    >
+                    <Text style={styles.sidebarItemText}>Grocery List</Text>
+                  </TouchableOpacity>
+                  </Link>
+                  
+                  <Link href="/grocery" asChild>
+                  <TouchableOpacity 
+                      style={styles.sidebarItem}
+                      onPress={() => setIsSidebarVisible(false)}
+                    >
+                    <Text style={styles.sidebarItemText}>Recipes</Text>
+                  </TouchableOpacity>
+                  </Link>
+                  
+                  <TouchableOpacity style={styles.sidebarItem}>
+                    <Text style={styles.sidebarItemText}>Help</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
         {/* Welcome Message */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>
@@ -461,6 +522,78 @@ const styles = StyleSheet.create({
   foodDate: {
     fontSize: 14,
     color: Colors.secondaryText,
+  },
+
+  //styles for the side
+  sidebarOverlay: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  zIndex: 1000,
+  flex: 1,
+},
+
+sidebar: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: 280,
+  height: '100%',
+  backgroundColor: '#FFFFFF',
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 2,
+  },
+  shadowOpacity: 0.25,
+  shadowRadius: 3.84,
+  elevation: 5,
+  zIndex: 1001,
+},
+
+sidebarHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: 20,
+  borderBottomWidth: 1,
+  borderBottomColor: '#E0E0E0',
+  backgroundColor: Colors.primaryCard,
+},
+
+  sidebarTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.mainText,
+  },
+
+  sidebarCloseButton: {
+    padding: 5,
+  },
+
+  sidebarCloseText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: Colors.mainText,
+  },
+
+  sidebarContent: {
+    padding: 10,
+  },
+
+  sidebarItem: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+
+  sidebarItemText: {
+    fontSize: 16,
+    color: Colors.mainText,
   },
 
 });
