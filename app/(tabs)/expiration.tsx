@@ -1,8 +1,9 @@
 import ExpirationItems from '@/components/ExpirationItems';
 import { Text, View } from '@/components/Themed';
 import { expirationItems } from '@/data/ItemsList';
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 
 interface ExpirationItem {
@@ -12,12 +13,15 @@ interface ExpirationItem {
 }
 
 export default function ExpirationTabScreen() {
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [markedDates, setMarkedDates] = useState<{[date: string]: any}>({});
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [markedDates, setMarkedDates] = useState<{[date: string]: any}>({}); //mark the dates selected
+  const [showSearch, setShowSearch] = useState<boolean>(false); // control the search bar display
+  const [searchQuery, setSearchQuery] = useState<string>('');   // search for the key name
+  const [searchResults, setSearchResults] = useState<ExpirationItem[]>([]);
 
   const today = new Date().toISOString().split('T')[0];
   const itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
-
+  
   useEffect(() => {
     const newMarkedDates: {[date: string]: any} = {};
     
@@ -36,6 +40,17 @@ export default function ExpirationTabScreen() {
     setMarkedDates(newMarkedDates);
   }, []);
 
+    useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSearchResults([]);
+    } else {
+      const filtered = expirationItems.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setSearchResults(filtered);
+    }
+  }, [searchQuery]); 
+
   const handleDayPress = (day: any) => {
     console.log('Selected day:', day.dateString);
     setSelectedDate(day.dateString);
@@ -49,16 +64,81 @@ export default function ExpirationTabScreen() {
     );
   };
 
+  const handleScreenPress = () => {
+    if (showSearch) {
+      setShowSearch(false);
+      setSearchQuery('');
+      Keyboard.dismiss();
+    }
+  };
+
   return (
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
-      <View style={styles.container}>
-        <Text style={styles.title}>🗓 Expiration Dates Tracker</Text>
+      <TouchableOpacity 
+        activeOpacity={1} 
+        style={styles.flexContainer} 
+        onPress={handleScreenPress}
+      >
+      <View style={styles.header}>
+          <Text style={styles.title}>🗓 Expiration Dates Tracker</Text>
+          <TouchableOpacity 
+              style={styles.searchIcon} 
+              onPress={(e) => {
+                e.stopPropagation(); 
+                setShowSearch(!showSearch);
+              }}
+            >
+              <Ionicons name="search" size={24} color="gray" />
+          </TouchableOpacity>      
+      </View>
+
+      {showSearch && (
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search items..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchResults.length > 0 && (
+              <View style={styles.searchResults}>
+                <ScrollView>
+                  {searchResults.map(item => (
+                    <TouchableOpacity 
+                      key={item.id} 
+                      style={styles.searchResultItem}
+                      onPress={() => handleItemPress(item)}
+                    >
+                      <Text style={styles.searchResultName}>{item.name}</Text>
+                      <Text style={styles.searchResultDate}>Expires: {item.expirationDate}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+            {searchQuery.trim() !== '' && searchResults.length === 0 && (
+              <View style={styles.searchResults}>
+                <Text style={styles.noResults}>No items found</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         <Text style={styles.todayInfo}>
           {itemsExpiringToday.length > 0 
-            ? `Expires today(${today}): ${itemsExpiringToday.map(item => item.name).join(', ')}`
+            ? <>
+                Expires today ({today}): 
+                {itemsExpiringToday.map((item, index) => (
+                  <Text key={item.id}>
+                    {index > 0 && ', '}
+                    <Text style={styles.boldItemName}>{item.name}</Text>
+                  </Text>
+                ))}
+              </>
             : 'No items expire today'}
         </Text>
         <Text style={styles.instruction}>*there are things that will expire on dates with dots</Text>
@@ -119,14 +199,15 @@ export default function ExpirationTabScreen() {
           </ScrollView>
         </View>
         </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
   );
 }
 
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: '#fff',
     paddingTop: 50,
     alignItems: 'center',
@@ -136,9 +217,69 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'Avenir',
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 20,
+  } ,
+  searchIcon: {
+    padding: 10,
+  },
+  searchContainer: {
+    width: '90%',
+    maxWidth: 400,
+    marginTop: 10,
+    position: 'relative',
+    alignSelf: 'center',
+  },
+   flexContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+  },
+  searchInput: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
+  },
+  searchResults: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    maxHeight: 200,
+    zIndex: 10,
+  },
+  searchResultItem: {
+    padding: 10,
+    borderBottomColor: '#eee',
+    borderBottomWidth: 1,
+  },
+  searchResultName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  searchResultDate: {
+    fontSize: 14,
+    color: 'gray',
+  },
+  noResults: {
+    padding: 10,
+    textAlign: 'center',
+    color: 'gray',
+  },
   todayInfo: {
     fontSize: 16,
-    color: '#666',
+    color: '#1b6cceff',
     marginTop: 5,
     marginBottom: 10,
     textAlign: 'center',
@@ -168,6 +309,10 @@ const styles = StyleSheet.create({
   },
   expireTitle:{
     color:'#1d476eff'
+  },
+   boldItemName: {
+    fontSize: 18, 
+    fontWeight: 'bold',
   },
   itemsList: {
     minHeight: 120,
