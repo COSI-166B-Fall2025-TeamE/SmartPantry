@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StyleSheet, ScrollView, TouchableOpacity, View as RNView, ActivityIndicator, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
+
 
 interface Recipe {
   idMeal: string;
@@ -26,6 +27,7 @@ interface Recipe {
   dateModified: string | null;
 }
 
+
 export default function RecipeDetailScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
@@ -33,11 +35,13 @@ export default function RecipeDetailScreen() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
 
+
   useEffect(() => {
     if (id) {
       fetchRecipeDetails();
     }
   }, [id]);
+
 
   const fetchRecipeDetails = async () => {
     setLoading(true);
@@ -56,6 +60,7 @@ export default function RecipeDetailScreen() {
     }
   };
 
+
   const formatRecipe = (meal: any): Recipe => {
     const ingredients = [];
     for (let i = 1; i <= 20; i++) {
@@ -69,6 +74,7 @@ export default function RecipeDetailScreen() {
         });
       }
     }
+
 
     return {
       idMeal: meal.idMeal,
@@ -88,11 +94,13 @@ export default function RecipeDetailScreen() {
     };
   };
 
+
   const openYouTube = () => {
     if (recipe?.strYoutube) {
       Linking.openURL(recipe.strYoutube);
     }
   };
+
 
   const openSource = () => {
     if (recipe?.strSource) {
@@ -100,30 +108,63 @@ export default function RecipeDetailScreen() {
     }
   };
 
+
   const getTags = (strTags: string | null): string[] => {
     if (!strTags) return [];
     return strTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
   };
 
+
   if (loading) {
     return (
-      <SafeAreaView 
-        style={[
-          styles.safeArea, 
-          { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
-        ]} 
-        edges={['top', 'left', 'right']}
-      >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#371B34" />
-          <Text style={styles.loadingText}>Loading recipe...</Text>
-        </View>
-      </SafeAreaView>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView 
+          style={[
+            styles.safeArea, 
+            { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+          ]} 
+          edges={['top', 'left', 'right']}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#371B34" />
+            <Text style={styles.loadingText}>Loading recipe...</Text>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
+
 
   if (!recipe) {
     return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView 
+          style={[
+            styles.safeArea, 
+            { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+          ]} 
+          edges={['top', 'left', 'right']}
+        >
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Recipe not found</Text>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </>
+    );
+  }
+
+
+  const tags = getTags(recipe.strTags);
+
+
+  return (
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView 
         style={[
           styles.safeArea, 
@@ -131,112 +172,101 @@ export default function RecipeDetailScreen() {
         ]} 
         edges={['top', 'left', 'right']}
       >
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Recipe not found</Text>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+        <View style={styles.container}>
+          {/* Header with Back Button */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={colorScheme === 'dark' ? '#fff' : '#000'} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>Recipe</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-  const tags = getTags(recipe.strTags);
 
-  return (
-    <SafeAreaView 
-      style={[
-        styles.safeArea, 
-        { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
-      ]} 
-      edges={['top', 'left', 'right']}
-    >
-      <View style={styles.container}>
-        {/* Header with Back Button */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colorScheme === 'dark' ? '#fff' : '#000'} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>Recipe Details</Text>
-          <View style={styles.placeholder} />
-        </View>
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {/* Recipe Image */}
+            <Image 
+              source={{ uri: recipe.strMealThumb }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Recipe Image */}
-          <Image 
-            source={{ uri: recipe.strMealThumb }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
 
-          {/* Recipe Info */}
-          <View style={styles.contentContainer}>
-            <Text style={styles.recipeName}>{recipe.strMeal}</Text>
+            {/* Recipe Info */}
+            <View style={styles.contentContainer}>
+              <Text style={styles.recipeName}>{recipe.strMeal}</Text>
 
-            {/* Category and Area */}
-            <RNView style={styles.metaContainer}>
-              <RNView style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🌍</Text>
-                <Text style={styles.metaText}>{recipe.strArea}</Text>
+
+              {/* Category and Area */}
+              <RNView style={styles.metaContainer}>
+                <RNView style={styles.metaItem}>
+                  <Text style={styles.metaIcon}>🌍</Text>
+                  <Text style={styles.metaText}>{recipe.strArea}</Text>
+                </RNView>
+                
+                <RNView style={styles.metaItem}>
+                  <Text style={styles.metaIcon}>🍽️</Text>
+                  <Text style={styles.metaText}>{recipe.strCategory}</Text>
+                </RNView>
               </RNView>
-              
-              <RNView style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🍽️</Text>
-                <Text style={styles.metaText}>{recipe.strCategory}</Text>
-              </RNView>
-            </RNView>
 
-            {/* Tags */}
-            {tags.length > 0 && (
-              <RNView style={styles.tagsContainer}>
-                {tags.map((tag, index) => (
-                  <RNView key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </RNView>
-                ))}
-              </RNView>
-            )}
 
-            {/* Action Buttons */}
-            <RNView style={styles.actionButtons}>
-              {recipe.strYoutube && (
-                <TouchableOpacity style={styles.actionButton} onPress={openYouTube}>
-                  <Text style={styles.actionButtonText}>📹 Watch Video</Text>
-                </TouchableOpacity>
+              {/* Tags */}
+              {tags.length > 0 && (
+                <RNView style={styles.tagsContainer}>
+                  {tags.map((tag, index) => (
+                    <RNView key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>{tag}</Text>
+                    </RNView>
+                  ))}
+                </RNView>
               )}
-              {recipe.strSource && (
-                <TouchableOpacity style={[styles.actionButton, styles.actionButtonSecondary]} onPress={openSource}>
-                  <Text style={styles.actionButtonTextSecondary}>🔗 Source</Text>
-                </TouchableOpacity>
-              )}
-            </RNView>
 
-            {/* Ingredients Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Ingredients</Text>
-              <View style={styles.ingredientsList}>
-                {recipe.ingredients.map((item, index) => (
-                  <RNView key={index} style={styles.ingredientItem}>
-                    <Text style={styles.ingredientBullet}>•</Text>
-                    <Text style={styles.ingredientText}>
-                      {item.measure} {item.ingredient}
-                    </Text>
-                  </RNView>
-                ))}
+
+              {/* Action Buttons */}
+              <RNView style={styles.actionButtons}>
+                {recipe.strYoutube && (
+                  <TouchableOpacity style={styles.actionButton} onPress={openYouTube}>
+                    <Text style={styles.actionButtonText}>📹 Watch Video</Text>
+                  </TouchableOpacity>
+                )}
+                {recipe.strSource && (
+                  <TouchableOpacity style={[styles.actionButton, styles.actionButtonSecondary]} onPress={openSource}>
+                    <Text style={styles.actionButtonTextSecondary}>🔗 Source</Text>
+                  </TouchableOpacity>
+                )}
+              </RNView>
+
+
+              {/* Ingredients Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Ingredients</Text>
+                <View style={styles.ingredientsList}>
+                  {recipe.ingredients.map((item, index) => (
+                    <RNView key={index} style={styles.ingredientItem}>
+                      <Text style={styles.ingredientBullet}>•</Text>
+                      <Text style={styles.ingredientText}>
+                        {item.measure} {item.ingredient}
+                      </Text>
+                    </RNView>
+                  ))}
+                </View>
+              </View>
+
+
+              {/* Instructions Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Instructions</Text>
+                <Text style={styles.instructionsText}>{recipe.strInstructions}</Text>
               </View>
             </View>
-
-            {/* Instructions Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Instructions</Text>
-              <Text style={styles.instructionsText}>{recipe.strInstructions}</Text>
-            </View>
-          </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
