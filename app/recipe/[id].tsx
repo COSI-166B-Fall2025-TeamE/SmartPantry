@@ -80,7 +80,7 @@ export default function RecipeDetailScreen() {
         return false;
       }
     } catch (error) {
-      console.error('Error checking URL:', error);
+      console.error('Error checking if URL can be opened:', url);
       return false;
     }
 
@@ -98,7 +98,10 @@ export default function RecipeDetailScreen() {
         clearTimeout(timeoutId);
         return response.ok; // Returns true if status is 200-299
       } catch (error) {
-        console.error('Error validating URL:', url, error);
+        // Gracefully handle network errors, CORS issues, timeouts, etc.
+        // Don't log error to console - just return false
+        // The URL might still work in a browser even if HEAD request fails
+        // So we'll mark it as invalid but not crash the app
         return false;
       }
     }

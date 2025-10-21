@@ -128,22 +128,57 @@ export default function RecipeTabScreen() {
     };
   };
 
-  // Search recipes by name using API
+  // Search recipes by name AND ingredient simultaneously
   const handleSearch = async (query: string) => {
     if (query.length >= 3) {
       setLoading(true);
       try {
-        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`);
-        const data = await response.json();
+        // Search by recipe name
+        const nameSearchPromise = fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`)
+          .then(res => res.json());
         
-        if (data.meals) {
-          const formattedRecipes = data.meals.map(formatRecipe);
-          setRecipes(formattedRecipes);
-        } else {
-          setRecipes([]);
+        // Search by ingredient (replace spaces with underscores)
+        const ingredientQuery = query.replace(/\s+/g, '_');
+        const ingredientSearchPromise = fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`)
+          .then(res => res.json());
+        
+        // Wait for both searches to complete
+        const [nameData, ingredientData] = await Promise.all([nameSearchPromise, ingredientSearchPromise]);
+        
+        let allRecipes: Recipe[] = [];
+        
+        // Add recipes from name search
+        if (nameData.meals) {
+          const nameRecipes = nameData.meals.map(formatRecipe);
+          allRecipes = [...allRecipes, ...nameRecipes];
         }
+        
+        // Add recipes from ingredient search
+        if (ingredientData.meals) {
+          // Fetch full details for ingredient search results
+          const detailedMeals = await Promise.all(
+            ingredientData.meals.slice(0, 12).map((meal: any) => 
+              fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
+                .then(res => res.json())
+            )
+          );
+          
+          const ingredientRecipes = detailedMeals
+            .filter(result => result.meals && result.meals[0])
+            .map(result => formatRecipe(result.meals[0]));
+          
+          allRecipes = [...allRecipes, ...ingredientRecipes];
+        }
+        
+        // Remove duplicates based on idMeal
+        const uniqueRecipes = Array.from(
+          new Map(allRecipes.map(recipe => [recipe.idMeal, recipe])).values()
+        );
+        
+        setRecipes(uniqueRecipes);
       } catch (error) {
         console.error('Error searching recipes:', error);
+        setRecipes([]);
       } finally {
         setLoading(false);
       }
@@ -167,7 +202,10 @@ export default function RecipeTabScreen() {
   // Filter recipes locally for shorter queries
   const displayedRecipes = searchQuery.length > 0 && searchQuery.length < 3
     ? recipes.filter(recipe => 
-        recipe.strMeal.toLowerCase().includes(searchQuery.toLowerCase())
+        recipe.strMeal.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        recipe.ingredients.some(ing => 
+          ing.ingredient.toLowerCase().includes(searchQuery.toLowerCase())
+        )
       )
     : recipes;
 
@@ -189,7 +227,7 @@ export default function RecipeTabScreen() {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by recipe name (min 3 chars)"
+            placeholder="Search by recipe name or ingredient (min 3 chars)"
             placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -285,7 +323,7 @@ export default function RecipeTabScreen() {
                   <Text style={styles.emptyStateSubtext}>
                     {searchQuery.length > 0 && searchQuery.length < 3 
                       ? 'Type at least 3 characters to search'
-                      : 'Try a different search term or category'}
+                      : 'Try a different recipe name, ingredient, or category'}
                   </Text>
                 </View>
               )}
