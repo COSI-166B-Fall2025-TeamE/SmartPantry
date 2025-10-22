@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useColorScheme } from 'react-native';
 import {
   View,
   Text,
@@ -6,13 +7,21 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+interface PantryItem {
+  id: string;
+  name: string;
+  quantity: string;
+  category: string;
+}
 
 const MyPantryScreen = () => {
-  const [pantryItems, setPantryItems] = useState([
+  const colorScheme = useColorScheme();
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>([
     { id: '1', name: 'Flour', quantity: '2 kg', category: 'Grains' },
     { id: '2', name: 'Sugar', quantity: '1 kg', category: 'Grains' },
     { id: '3', name: 'Olive Oil', quantity: '500 ml', category: 'Oils' },
@@ -54,7 +63,7 @@ const MyPantryScreen = () => {
   };
 
   // Remove item
-  const removeItem = (id) => {
+  const removeItem = (id: string) => {
     Alert.alert(
       'Remove Item',
       'Are you sure you want to remove this item?',
@@ -72,7 +81,7 @@ const MyPantryScreen = () => {
   };
 
   // Render each pantry item
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: PantryItem }) => (
     <View style={styles.itemCard}>
       <View style={styles.itemInfo}>
         <Text style={styles.itemName}>{item.name}</Text>
@@ -89,7 +98,13 @@ const MyPantryScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+      style={[
+        styles.container,
+        { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+      ]}
+      edges={['top', 'left', 'right']}
+    >
       {/* Header */}
       <Text style={styles.header}>My Pantry</Text>
 
@@ -135,6 +150,7 @@ const MyPantryScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Item name"
+              placeholderTextColor="#999"
               value={newItemName}
               onChangeText={setNewItemName}
             />
@@ -142,6 +158,7 @@ const MyPantryScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Quantity (e.g., 2 kg, 500 ml)"
+              placeholderTextColor="#999"
               value={newItemQuantity}
               onChangeText={setNewItemQuantity}
             />
@@ -149,6 +166,7 @@ const MyPantryScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Category (e.g., Grains, Dairy)"
+              placeholderTextColor="#999"
               value={newItemCategory}
               onChangeText={setNewItemCategory}
             />
@@ -178,31 +196,28 @@ const MyPantryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
     padding: 20,
-    backgroundColor: '#fff',
     textAlign: 'center',
-    color: '#333',
+    marginBottom: 5,
   },
   searchBar: {
     margin: 16,
     padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    borderRadius: 12,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0,
   },
   listContainer: {
     padding: 16,
     paddingBottom: 80,
   },
   itemCard: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(128, 128, 128, 0.05)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -220,19 +235,18 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: 'bold',
     marginBottom: 4,
   },
   itemQuantity: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    opacity: 0.7,
     marginBottom: 4,
   },
   itemCategory: {
     fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
+    fontWeight: '600',
+    color: '#007AFF',
   },
   removeButton: {
     width: 32,
@@ -251,7 +265,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#371B34',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 30,
@@ -269,8 +283,9 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: 'center',
     marginTop: 40,
-    fontSize: 16,
-    color: '#999',
+    fontSize: 18,
+    fontWeight: 'bold',
+    opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,
@@ -289,7 +304,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
-    color: '#333',
   },
   input: {
     borderWidth: 1,
@@ -314,7 +328,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#371B34',
   },
   cancelButtonText: {
     textAlign: 'center',
