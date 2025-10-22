@@ -84,3 +84,75 @@ const getExpiryColor = (expiryDays: number) => {
   if (expiryDays <= 90) return '#8BC34A'; // Light green for 1-3 months
   return '#4CAF50'; // Green for 3+ months
 };
+
+suggestions.length > 0 ? (
+              <View style={styles.suggestionsContainer}>
+                <Text style={styles.suggestionsTitle}>Suggestions:</Text>
+                <View style={styles.suggestionsGrid}>
+                  {suggestions.map((suggestion, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.suggestionChip}
+                      onPress={() => addItem(suggestion.name)}
+                    >
+                      <View style={styles.suggestionContent}>
+                        <Text style={styles.suggestionText}>{suggestion.name}</Text>
+                        <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
+                          ⏱️ Expires in {suggestion.expiry}
+                        </Text>
+                      </View>
+                      <Text style={styles.suggestionPlus}>+</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : null
+          }
+        />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+
+
+  export const calculateRemainingExpiryDays = (expirationDate: string): number => {
+  const currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0); //set time 0, calculate the date
+  
+  const expiryDate = new Date(expirationDate);
+  expiryDate.setHours(0, 0, 0, 0); 
+  // calcuate the diffenrence between two dates
+  const timeDiff = expiryDate.getTime() - currentDate.getTime();
+  
+  // transform back to day
+  const remainingDays = timeDiff / (1000 * 3600 * 24);
+  
+  // return the days calculated
+  return Math.max(0, remainingDays);
+};
+
+ React.useEffect(() => {
+    setSuggestions(getSuggestions(items));
+  }, [items]);
+
+
+
+  useEffect(() => {
+    setSuggestions(getSuggestions(items));
+    saveGroceryList(items);
+    setExpiringItems(getExpiringSoonItems());
+  }, [items]);
+
+  <View style={styles.expiringContent}>
+  <Text style={styles.expiringText}>{item.name}</Text>
+  {item.remainingExpiryDays !== undefined && (
+    {/* Expiration days display temporarily removed*/}
+    /**<Text style={[
+      styles.expiringDays, 
+      { color: getExpiryColorByDays(item.remainingExpiryDays) }
+    ]}>
+      {item.remainingExpiryDays > 0 
+        ? `${item.remainingExpiryDays} days left` 
+        : 'Expired'}
+    </Text>**/
+  )}
+</View>

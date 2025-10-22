@@ -1,11 +1,15 @@
+import { getExpiringSoonItems } from '@/data/expiryCalculator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
+
+
 
 import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -28,18 +32,31 @@ type Suggestion = {
   expiryDays: number;
 };
 
+type ExpiryItem = {
+  name: string;
+  expiry: string;
+  expiryDays: number;
+  remainingExpiryDays?: number;
+  expirationDate?: string;
+};
+
 export default function GroceryList() {
   const [items, setItems] = useState<Array<{ id: string; text: string; completed: boolean }>>([]);
   const [inputText, setInputText] = useState('');
   const [suggestions, setSuggestions] = useState<Array<{ name: string; expiry: string; expiryDays: number }>>([]);
 
+  //const itemsWithExpiry = getActualExpiryItems();
+  const [expiringItems, setExpiringItems] = useState<ExpiryItem[]>([]);
+
   useEffect(() => {
     loadGroceryList();
   }, []);
 
+
   useEffect(() => {
     setSuggestions(getSuggestions(items));
     saveGroceryList(items);
+    setExpiringItems(getExpiringSoonItems());
   }, [items]);
 
   const loadGroceryList = async () => {
@@ -61,10 +78,6 @@ export default function GroceryList() {
     }
   };
 
-
-  React.useEffect(() => {
-    setSuggestions(getSuggestions(items));
-  }, [items]);
 
   const addItem = (text?: string) => {
     const itemText = text || inputText;
@@ -145,7 +158,34 @@ export default function GroceryList() {
             <Text style={styles.emptyText}>Your grocery list is empty</Text>
           }
           ListHeaderComponent={
-            suggestions.length > 0 ? (
+            <>
+            {expiringItems.length > 0 && (
+                <View style={styles.expiringContainer}>
+                  <Text style={styles.expiringTitle}>Current inventory:</Text>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.expiringScrollView}
+                    contentContainerStyle={styles.expiringContentContainer}
+                  >
+                  {expiringItems.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={styles.expiringChip}
+                      onPress={() => addItem(item.name)}
+                    >
+                        <View style={styles.expiringContent}>
+                          <Text style={styles.expiringText}>{item.name}</Text>
+                          {/* Expiration days display temporarily removed*/}
+                        </View>
+                        <Text style={styles.expiringPlus}>+</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+            {suggestions.length > 0 ? (
               <View style={styles.suggestionsContainer}>
                 <Text style={styles.suggestionsTitle}>Suggestions:</Text>
                 <View style={styles.suggestionsGrid}>
@@ -166,12 +206,14 @@ export default function GroceryList() {
                   ))}
                 </View>
               </View>
-            ) : null
+            ) : null}
+            </>
           }
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+  
 }
 
 const styles = StyleSheet.create({
@@ -348,6 +390,60 @@ const styles = StyleSheet.create({
   },
   suggestionPlus: {
     color: '#2196F3',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
+
+  expiringContainer: {
+  backgroundColor: '#fff',
+  padding: 16,
+  marginBottom: 8,
+  borderBottomWidth: 1,
+  borderBottomColor: '#e0e0e0',
+  },
+  expiringTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+  },
+  expiringScrollView: {
+    flexGrow: 0,
+  },
+  expiringContentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  expiringChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5f5',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#f44336',
+    marginRight: 8,
+    minWidth: 150,
+  },
+  expiringContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  expiringText: {
+    color: '#f44336',
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  expiringDays: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 3,
+  },
+  expiringPlus: {
+    color: '#f44336',
     fontSize: 18,
     fontWeight: 'bold',
   },
