@@ -156,7 +156,7 @@ export default function TabOneScreen() {
                     <Text style={styles.sidebarItemText}>Show current shopping list</Text>
                   </TouchableOpacity>
 
-                  <Link href="/grocery" asChild>
+                  <Link href="/recipe" asChild>
                   <TouchableOpacity 
                       style={styles.sidebarItem}
                       onPress={() => setIsSidebarVisible(false)}
