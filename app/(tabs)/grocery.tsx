@@ -2,7 +2,6 @@ import { StyleSheet } from 'react-native';
 
 import GroceryList from '@/components/GroceryList';
 import { View } from '@/components/Themed';
-import { Colors } from '@/constants/globalStyles';
 
 export default function GroceryTabScreen() {
   return (
