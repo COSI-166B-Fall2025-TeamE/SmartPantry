@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useColorScheme } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StyleSheet, ScrollView, TouchableOpacity, View as RNView, ActivityIndicator, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
@@ -32,12 +32,91 @@ export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isYoutubeValid, setIsYoutubeValid] = useState(false);
+  const [isSourceValid, setIsSourceValid] = useState(false);
+  const [checkingLinks, setCheckingLinks] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchRecipeDetails();
     }
   }, [id]);
+
+  // Validate URLs when recipe is loaded
+  useEffect(() => {
+    if (recipe) {
+      validateLinks();
+    }
+  }, [recipe]);
+
+  const validateLinks = async () => {
+    setCheckingLinks(true);
+    
+    // Check YouTube link
+    if (recipe?.strYoutube) {
+      const youtubeValid = await checkUrlValidity(recipe.strYoutube);
+      setIsYoutubeValid(youtubeValid);
+    }
+    
+    // Check source link
+    if (recipe?.strSource) {
+      const sourceValid = await checkUrlValidity(recipe.strSource);
+      setIsSourceValid(sourceValid);
+    }
+    
+    setCheckingLinks(false);
+  };
+
+  const checkUrlValidity = async (url: string): Promise<boolean> => {
+    // First, validate URL format
+    if (!isValidUrlFormat(url)) {
+      return false;
+    }
+
+    // Check if URL can be opened (this works for deep links and external URLs)
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        return false;
+      }
+    } catch (error) {
+      console.error('Error checking if URL can be opened:', url);
+      return false;
+    }
+
+    // For http/https URLs, attempt a HEAD request to verify the link works
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        const response = await fetch(url, {
+          method: 'HEAD',
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+        return response.ok; // Returns true if status is 200-299
+      } catch (error) {
+        // Gracefully handle network errors, CORS issues, timeouts, etc.
+        // Don't log error to console - just return false
+        // The URL might still work in a browser even if HEAD request fails
+        // So we'll mark it as invalid but not crash the app
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const isValidUrlFormat = (string: string): boolean => {
+    try {
+      new URL(string);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  };
 
   const fetchRecipeDetails = async () => {
     setLoading(true);
@@ -89,13 +168,13 @@ export default function RecipeDetailScreen() {
   };
 
   const openYouTube = () => {
-    if (recipe?.strYoutube) {
+    if (recipe?.strYoutube && isYoutubeValid) {
       Linking.openURL(recipe.strYoutube);
     }
   };
 
   const openSource = () => {
-    if (recipe?.strSource) {
+    if (recipe?.strSource && isSourceValid) {
       Linking.openURL(recipe.strSource);
     }
   };
@@ -107,134 +186,176 @@ export default function RecipeDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView 
-        style={[
-          styles.safeArea, 
-          { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
-        ]} 
-        edges={['top', 'left', 'right']}
-      >
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#371B34" />
-          <Text style={styles.loadingText}>Loading recipe...</Text>
-        </View>
-      </SafeAreaView>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView 
+          style={[
+            styles.safeArea, 
+            { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+          ]} 
+          edges={['top', 'left', 'right']}
+        >
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#371B34" />
+            <Text style={styles.loadingText}>Loading recipe...</Text>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   if (!recipe) {
     return (
-      <SafeAreaView 
-        style={[
-          styles.safeArea, 
-          { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
-        ]} 
-        edges={['top', 'left', 'right']}
-      >
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Recipe not found</Text>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView 
+          style={[
+            styles.safeArea, 
+            { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+          ]} 
+          edges={['top', 'left', 'right']}
+        >
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Recipe not found</Text>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   const tags = getTags(recipe.strTags);
 
   return (
-    <SafeAreaView 
-      style={[
-        styles.safeArea, 
-        { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
-      ]} 
-      edges={['top', 'left', 'right']}
-    >
-      <View style={styles.container}>
-        {/* Header with Back Button */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colorScheme === 'dark' ? '#fff' : '#000'} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>Recipe Details</Text>
-          <View style={styles.placeholder} />
-        </View>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+      <SafeAreaView 
+        style={[
+          styles.safeArea, 
+          { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+        ]} 
+        edges={['top', 'left', 'right']}
+      >
+        <View style={styles.container}>
+          {/* Header with Back Button */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color={colorScheme === 'dark' ? '#fff' : '#000'} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>Recipe</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Recipe Image */}
-          <Image 
-            source={{ uri: recipe.strMealThumb }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {/* Recipe Image */}
+            <Image 
+              source={{ uri: recipe.strMealThumb }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
 
-          {/* Recipe Info */}
-          <View style={styles.contentContainer}>
-            <Text style={styles.recipeName}>{recipe.strMeal}</Text>
+            {/* Recipe Info */}
+            <View style={styles.contentContainer}>
+              <Text style={styles.recipeName}>{recipe.strMeal}</Text>
 
-            {/* Category and Area */}
-            <RNView style={styles.metaContainer}>
-              <RNView style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🌍</Text>
-                <Text style={styles.metaText}>{recipe.strArea}</Text>
+              {/* Category and Area */}
+              <RNView style={styles.metaContainer}>
+                <RNView style={styles.metaItem}>
+                  <Text style={styles.metaIcon}>🌍</Text>
+                  <Text style={styles.metaText}>{recipe.strArea}</Text>
+                </RNView>
+                
+                <RNView style={styles.metaItem}>
+                  <Text style={styles.metaIcon}>🍽️</Text>
+                  <Text style={styles.metaText}>{recipe.strCategory}</Text>
+                </RNView>
               </RNView>
-              
-              <RNView style={styles.metaItem}>
-                <Text style={styles.metaIcon}>🍽️</Text>
-                <Text style={styles.metaText}>{recipe.strCategory}</Text>
-              </RNView>
-            </RNView>
 
-            {/* Tags */}
-            {tags.length > 0 && (
-              <RNView style={styles.tagsContainer}>
-                {tags.map((tag, index) => (
-                  <RNView key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </RNView>
-                ))}
-              </RNView>
-            )}
-
-            {/* Action Buttons */}
-            <RNView style={styles.actionButtons}>
-              {recipe.strYoutube && (
-                <TouchableOpacity style={styles.actionButton} onPress={openYouTube}>
-                  <Text style={styles.actionButtonText}>📹 Watch Video</Text>
-                </TouchableOpacity>
+              {/* Tags */}
+              {tags.length > 0 && (
+                <RNView style={styles.tagsContainer}>
+                  {tags.map((tag, index) => (
+                    <RNView key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>{tag}</Text>
+                    </RNView>
+                  ))}
+                </RNView>
               )}
-              {recipe.strSource && (
-                <TouchableOpacity style={[styles.actionButton, styles.actionButtonSecondary]} onPress={openSource}>
-                  <Text style={styles.actionButtonTextSecondary}>🔗 Source</Text>
-                </TouchableOpacity>
-              )}
-            </RNView>
 
-            {/* Ingredients Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Ingredients</Text>
-              <View style={styles.ingredientsList}>
-                {recipe.ingredients.map((item, index) => (
-                  <RNView key={index} style={styles.ingredientItem}>
-                    <Text style={styles.ingredientBullet}>•</Text>
-                    <Text style={styles.ingredientText}>
-                      {item.measure} {item.ingredient}
-                    </Text>
-                  </RNView>
-                ))}
+              {/* Action Buttons */}
+              <RNView style={styles.actionButtons}>
+                {recipe.strYoutube && (
+                  <TouchableOpacity 
+                    style={[
+                      styles.actionButton,
+                      (!isYoutubeValid || checkingLinks) && styles.actionButtonDisabled
+                    ]} 
+                    onPress={openYouTube}
+                    disabled={!isYoutubeValid || checkingLinks}
+                  >
+                    {checkingLinks ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={[
+                        styles.actionButtonText,
+                        (!isYoutubeValid || checkingLinks) && styles.actionButtonTextDisabled
+                      ]}>
+                        📹 Watch Video {!isYoutubeValid && '(Unavailable)'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {recipe.strSource && (
+                  <TouchableOpacity 
+                    style={[
+                      styles.actionButton, 
+                      styles.actionButtonSecondary,
+                      (!isSourceValid || checkingLinks) && styles.actionButtonSecondaryDisabled
+                    ]} 
+                    onPress={openSource}
+                    disabled={!isSourceValid || checkingLinks}
+                  >
+                    {checkingLinks ? (
+                      <ActivityIndicator size="small" color="#371B34" />
+                    ) : (
+                      <Text style={[
+                        styles.actionButtonTextSecondary,
+                        (!isSourceValid || checkingLinks) && styles.actionButtonTextDisabled
+                      ]}>
+                        🔗 Source {!isSourceValid && '(Unavailable)'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </RNView>
+
+              {/* Ingredients Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Ingredients</Text>
+                <View style={styles.ingredientsList}>
+                  {recipe.ingredients.map((item, index) => (
+                    <RNView key={index} style={styles.ingredientItem}>
+                      <Text style={styles.ingredientBullet}>•</Text>
+                      <Text style={styles.ingredientText}>
+                        {item.measure} {item.ingredient}
+                      </Text>
+                    </RNView>
+                  ))}
+                </View>
+              </View>
+
+              {/* Instructions Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Instructions</Text>
+                <Text style={styles.instructionsText}>{recipe.strInstructions}</Text>
               </View>
             </View>
-
-            {/* Instructions Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Instructions</Text>
-              <Text style={styles.instructionsText}>{recipe.strInstructions}</Text>
-            </View>
-          </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -362,11 +483,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#371B34',
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonDisabled: {
+    backgroundColor: '#CDD0E3',
+    opacity: 0.5,
   },
   actionButtonSecondary: {
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: '#371B34',
+  },
+  actionButtonSecondaryDisabled: {
+    borderColor: '#CDD0E3',
+    opacity: 0.5,
   },
   actionButtonText: {
     color: '#fff',
@@ -377,6 +507,9 @@ const styles = StyleSheet.create({
     color: '#371B34',
     fontSize: 14,
     fontWeight: '600',
+  },
+  actionButtonTextDisabled: {
+    color: '#999',
   },
   section: {
     marginBottom: 30,
