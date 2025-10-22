@@ -28,7 +28,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home Page',
+          title: 'Home',
           tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
         }}
       />
@@ -36,7 +36,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="expiration"
         options={{
-          title: 'Expiration Dates',
+          title: 'Expiration',
           tabBarIcon: ({ color }) => <TabBarIcon name="calendar-o" color={color} />,
         }}
       />
