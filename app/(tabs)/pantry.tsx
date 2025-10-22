@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useColorScheme } from 'react-native';
 import {
   View,
@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,6 +20,102 @@ interface PantryItem {
   quantity: string;
   category: string;
 }
+
+const SwipeableItem = ({ item, onDelete }: { item: PantryItem; onDelete: () => void }) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only respond to horizontal swipes
+        return Math.abs(gestureState.dx) > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Only allow left swipe (negative dx)
+        if (gestureState.dx < 0) {
+          translateX.setValue(gestureState.dx);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -100) {
+          // Swipe threshold met - show delete button
+          Animated.spring(translateX, {
+            toValue: -100,
+            useNativeDriver: true,
+          }).start();
+        } else {
+          // Snap back
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Remove Item',
+      'Are you sure you want to remove this item?',
+      [
+        { 
+          text: 'Cancel', 
+          style: 'cancel',
+          onPress: () => {
+            // Snap back on cancel
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+            }).start();
+          }
+        },
+        {
+          text: 'Remove',
+          onPress: () => {
+            Animated.timing(translateX, {
+              toValue: -400,
+              duration: 300,
+              useNativeDriver: true,
+            }).start(() => {
+              onDelete();
+            });
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.swipeableContainer}>
+      <View style={styles.deleteButtonContainer}>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDelete}
+        >
+          <Text style={styles.deleteButtonText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Animated.View
+        style={[
+          styles.itemCard,
+          {
+            transform: [{ translateX }],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <View style={[styles.itemInfo, { backgroundColor: 'transparent' }]}>
+          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemQuantity}>{item.quantity}</Text>
+          <Text style={styles.itemCategory}>{item.category}</Text>
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
 
 const MyPantryScreen = () => {
   const colorScheme = useColorScheme();
@@ -64,37 +162,15 @@ const MyPantryScreen = () => {
 
   // Remove item
   const removeItem = (id: string) => {
-    Alert.alert(
-      'Remove Item',
-      'Are you sure you want to remove this item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          onPress: () => {
-            setPantryItems(pantryItems.filter((item) => item.id !== id));
-          },
-          style: 'destructive',
-        },
-      ]
-    );
+    setPantryItems(pantryItems.filter((item) => item.id !== id));
   };
 
   // Render each pantry item
   const renderItem = ({ item }: { item: PantryItem }) => (
-    <View style={styles.itemCard}>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemQuantity}>{item.quantity}</Text>
-        <Text style={styles.itemCategory}>{item.category}</Text>
-      </View>
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={() => removeItem(item.id)}
-      >
-        <Text style={styles.removeButtonText}>×</Text>
-      </TouchableOpacity>
-    </View>
+    <SwipeableItem
+      item={item}
+      onDelete={() => removeItem(item.id)}
+    />
   );
 
   return (
@@ -216,19 +292,41 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 80,
   },
+  swipeableContainer: {
+    marginBottom: 12,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  deleteButtonContainer: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    width: 100,
+  },
+  deleteButton: {
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    height: '100%',
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
   itemCard: {
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
+    backgroundColor: '#E8EAF6',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   itemInfo: {
     flex: 1,
@@ -237,29 +335,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
+    color: '#000',
   },
   itemQuantity: {
     fontSize: 13,
     opacity: 0.7,
     marginBottom: 4,
+    color: '#000',
   },
   itemCategory: {
     fontSize: 12,
     fontWeight: '600',
     color: '#007AFF',
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#ff4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeButtonText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
   },
   addButton: {
     position: 'absolute',
