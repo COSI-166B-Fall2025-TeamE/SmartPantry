@@ -5,33 +5,27 @@ import {
   Alert,
   ActivityIndicator,
   View,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScanQrOverlay from "./overlay";
-import { useState, useRef, useEffect } from "react"; // <-- Import useRef and useEffect
+import { useState, useRef, useEffect } from "react";
+import Ionicons from '@expo/vector-icons/build/Ionicons';
 
 export default function Scan() {
-  // We'll keep isLoading for the spinner
   const [isLoading, setIsLoading] = useState(false);
-  
-  // This ref will track if we are *currently* processing a scan
-  // This is better than state because it updates instantly.
-  const isScanning = useRef(false); // <-- ADD THIS
+  const isScanning = useRef(false);
 
-  // This function will re-enable scanning when the user navigates back to the screen
   useEffect(() => {
-    // This is optional, but good practice.
-    // When the screen comes into focus, reset the scanner.
     isScanning.current = false;
   }, []);
 
 
   const resetScanner = () => {
-    isScanning.current = false; // <-- Reset the ref
+    isScanning.current = false;
     setIsLoading(false);
   };
 
-  // This function calls the Open Food Facts API
   const fetchProductInfo = async (barcode: string) => {
     setIsLoading(true);
 
@@ -49,24 +43,22 @@ export default function Scan() {
           [
             { 
               text: 'Scan Another', 
-              onPress: resetScanner // <-- Use resetScanner
+              onPress: resetScanner
             },
             { 
               text: 'Back Home', 
               onPress: () => router.replace('/') 
-              // We don't need to reset here since we are leaving the screen
             }
           ]
         );
       } else {
-        // Product not found
         Alert.alert(
           'Product Not Found',
           'This barcode was not found in the Open Food Facts database.',
           [
             { 
               text: 'Scan Another', 
-              onPress: resetScanner // <-- Use resetScanner
+              onPress: resetScanner 
             } 
           ]
         );
@@ -79,35 +71,18 @@ export default function Scan() {
         [
           { 
             text: 'Scan Another', 
-            onPress: resetScanner // <-- Use resetScanner
+            onPress: resetScanner
           }
         ]
       );
-    } finally {
-      // Don't set isLoading(false) here, let the alert reset it
-      // so the scanner doesn't turn on *behind* the alert.
-      // We'll let the alert's onPress handle it.
-      
-      // We will set loading to false *only if* the alert logic fails
-      // for some reason, but in most cases, the alert handles it.
-      if (isLoading) {
-         // This is a safety fallback. The alert should handle it.
-         // Let's rely on the alert buttons instead.
-      }
     }
   };
 
-  // --- THIS IS THE UPDATED HANDLER ---
   const handleScan = ({ data }: { data: string }) => {
-    // 1. Check the ref. If it's true, we're already scanning. Stop!
     if (isScanning.current) {
       return;
     }
-
-    // 2. Set the ref to true IMMEDIATELY.
     isScanning.current = true; 
-    
-    // 3. Now, proceed with the fetch
     console.log("data", data);
     fetchProductInfo(data); 
   };
@@ -133,15 +108,20 @@ export default function Scan() {
               ],
             }}
             
-            // --- THIS IS THE FIX ---
-            // We just pass the handleScan function directly.
-            // The logic to stop multiple scans is now *inside* handleScan.
             onBarcodeScanned={handleScan}
-            // --- END OF FIX ---
           />
           <ScanQrOverlay />
 
-          {/* Loading overlay */}
+          {/* Back Button */}
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={28} color="#000000" /> 
+          </TouchableOpacity>
+
+
+          {/* Loading Overlay */}
           {isLoading && (
             <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="large" color="#FFFFFF" />
@@ -151,12 +131,22 @@ export default function Scan() {
   );
 }
 
-// Add the styles for the loading overlay
 const styles = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 20, 
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60, 
+    left: 20,
+    
+    backgroundColor: '#CDD0E3', 
+    padding: 10,
+    borderRadius: 50, 
+    zIndex: 10, 
   }
 });
