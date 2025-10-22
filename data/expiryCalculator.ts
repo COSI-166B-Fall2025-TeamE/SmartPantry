@@ -2,42 +2,59 @@ import { expirationItems } from './ItemsList';
 import { grocerySuggestions, Suggestion } from './suggestions';
 
 export interface ExpiryItem extends Suggestion {
-  purchaseDate?: string;
+  expirationDate?: string;
   remainingExpiryDays?: number;
 }
 
-export const calculateRemainingExpiryDays = (purchaseDate: Date, originalExpiryDays: number): number => {
-  const currentDate = new Date();
-  const timeDiff = currentDate.getTime() - purchaseDate.getTime();
-  const daysSincePurchase = timeDiff / (1000 * 3600 * 24);
-  const remainingExpiryDays = originalExpiryDays - daysSincePurchase;
-  
-  return Math.max(0, remainingExpiryDays);
+
+export const calculateRemainingExpiryDays = (expirationDate: string, name: String): number => {
+  //test the styles
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expirationDate)) {
+    console.warn("Invalid date format. Expected 'YYYY-MM-DD'.");
+    return 0;
+  }
+
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+  // construct date
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const [y, m, d] = expirationDate.split('-').map(Number);
+  const expiryUTC = Date.UTC(y, m - 1, d);
+
+  // get the difference in days
+  const diffDays = Math.floor((expiryUTC - todayUTC) / MS_PER_DAY);
+    console.log({name, expirationDate, todayUTC, expiryUTC, diffDays });
+
+  return Math.max(0, diffDays);
 };
 
 export const getActualExpiryItems = (): ExpiryItem[] => {
-  return expirationItems.map(item => {
-    const suggestion = grocerySuggestions.find(s => 
+  const result = expirationItems.map(item => {
+    const suggestion = grocerySuggestions.find(s =>
       s.name.toLowerCase() === item.name.toLowerCase()
     );
     if (suggestion) {
-      const purchaseDate = new Date(item.expirationDate);
-      const remainingExpiryDays = calculateRemainingExpiryDays(purchaseDate, suggestion.expiryDays);
-      
+      const remainingExpiryDays = calculateRemainingExpiryDays(item.expirationDate, item.name);
       return {
         ...suggestion,
-        purchaseDate: item.expirationDate,
-        remainingExpiryDays: remainingExpiryDays
+        id: item.id,
+        expirationDate: item.expirationDate,
+        remainingExpiryDays
       };
     }
     return {
-      name: item.expirationDate,
+      id: item.id,
+      name: item.name,
       expiry: 'Unknown',
       expiryDays: 0,
       remainingExpiryDays: 0
     };
   });
+  return result;
 };
+
 
 export const getExpiryColorByDays = (remainingExpiryDays: number): string => {
   if (remainingExpiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
