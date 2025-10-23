@@ -5,9 +5,9 @@ export interface ExpirationItem {
 }
 
 export const expirationItems: ExpirationItem[] = [
-  { id: '1', name: 'Apples', expirationDate: '2025-10-18' },
-  { id: '2', name: 'Bananas', expirationDate: '2025-10-20' },
-  { id: '3', name: 'Milk', expirationDate: '2025-10-22' },
+  { id: '1', name: 'Apples', expirationDate: '2025-10-20' },
+  { id: '2', name: 'Bananas', expirationDate: '2025-10-22' },
+  { id: '3', name: 'Milk', expirationDate: '2025-10-23' },
   { id: '4', name: 'Eggs', expirationDate: '2025-10-27' },
   { id: '5', name: 'Bread', expirationDate: '2025-10-24' },
   { id: '6', name: 'Lettuce', expirationDate: '2025-10-30' },

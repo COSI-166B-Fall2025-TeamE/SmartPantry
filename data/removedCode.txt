@@ -145,14 +145,13 @@ suggestions.length > 0 ? (
   <View style={styles.expiringContent}>
   <Text style={styles.expiringText}>{item.name}</Text>
   {item.remainingExpiryDays !== undefined && (
-    {/* Expiration days display temporarily removed*/}
-    /**<Text style={[
+      <Text style={[
       styles.expiringDays, 
       { color: getExpiryColorByDays(item.remainingExpiryDays) }
     ]}>
       {item.remainingExpiryDays > 0 
         ? `${item.remainingExpiryDays} days left` 
         : 'Expired'}
-    </Text>**/
+    </Text>
   )}
 </View>

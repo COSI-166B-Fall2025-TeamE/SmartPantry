@@ -1,4 +1,4 @@
-import { getExpiringSoonItems } from '@/data/expiryCalculator';
+import { getExpiringSoonItems, getExpiryColorByDays } from '@/data/expiryCalculator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 
@@ -56,7 +56,7 @@ export default function GroceryList() {
   useEffect(() => {
     setSuggestions(getSuggestions(items));
     saveGroceryList(items);
-    setExpiringItems(getExpiringSoonItems());
+    setExpiringItems(getExpiringSoonItems() as { name: string; expiry: string; expiryDays: number }[]);
   }, [items]);
 
   const loadGroceryList = async () => {
@@ -176,7 +176,18 @@ export default function GroceryList() {
                     >
                         <View style={styles.expiringContent}>
                           <Text style={styles.expiringText}>{item.name}</Text>
-                          {/* Expiration days display temporarily removed*/}
+                          <View style={styles.expiringContent}>
+                              {item.remainingExpiryDays !== undefined && (
+                                  <Text style={[
+                                  styles.expiringDays, 
+                                  { color: getExpiryColorByDays(item.remainingExpiryDays) }
+                                ]}>
+                                  {item.remainingExpiryDays > 0 
+                                    ? `${item.remainingExpiryDays} days left` 
+                                    : 'Expired'}
+                                </Text>
+                              )}
+                            </View>
                         </View>
                         <Text style={styles.expiringPlus}>+</Text>
                       </TouchableOpacity>

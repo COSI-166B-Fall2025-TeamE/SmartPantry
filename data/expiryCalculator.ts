@@ -1,7 +1,6 @@
 import { expirationItems } from './ItemsList';
-import { grocerySuggestions, Suggestion } from './suggestions';
 
-export interface ExpiryItem extends Suggestion {
+export interface ExpiryItem {
   expirationDate?: string;
   remainingExpiryDays?: number;
 }
@@ -25,36 +24,34 @@ export const calculateRemainingExpiryDays = (expirationDate: string, name: Strin
 
   // get the difference in days
   const diffDays = Math.floor((expiryUTC - todayUTC) / MS_PER_DAY);
-    console.log({name, expirationDate, todayUTC, expiryUTC, diffDays });
+    //console.log({name, expirationDate, todayUTC, expiryUTC, diffDays });
 
   return Math.max(0, diffDays);
 };
 
 export const getActualExpiryItems = (): ExpiryItem[] => {
+  let remainingExpiryDays = 0;
   const result = expirationItems.map(item => {
-    const suggestion = grocerySuggestions.find(s =>
-      s.name.toLowerCase() === item.name.toLowerCase()
-    );
-    if (suggestion) {
-      const remainingExpiryDays = calculateRemainingExpiryDays(item.expirationDate, item.name);
+      remainingExpiryDays = calculateRemainingExpiryDays(item.expirationDate, item.name);
+
       return {
-        ...suggestion,
+        ...item,
         id: item.id,
         expirationDate: item.expirationDate,
         remainingExpiryDays
       };
-    }
-    return {
-      id: item.id,
-      name: item.name,
-      expiry: 'Unknown',
-      expiryDays: 0,
-      remainingExpiryDays: 0
-    };
+
   });
   return result;
 };
 
+export const getExpiringSoonItems = (daysThreshold: number = 7): ExpiryItem[] => {
+
+  return getActualExpiryItems().filter(item => 
+    item.remainingExpiryDays !== undefined 
+  );
+
+};
 
 export const getExpiryColorByDays = (remainingExpiryDays: number): string => {
   if (remainingExpiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
@@ -66,8 +63,5 @@ export const getExpiryColorByDays = (remainingExpiryDays: number): string => {
   return '#4CAF50'; // Green for 3+ months
 };
 
-export const getExpiringSoonItems = (daysThreshold: number = 7): ExpiryItem[] => {
-  return getActualExpiryItems().filter(item => 
-    item.remainingExpiryDays !== undefined && item.remainingExpiryDays <= daysThreshold
-  );
-};
+
+
