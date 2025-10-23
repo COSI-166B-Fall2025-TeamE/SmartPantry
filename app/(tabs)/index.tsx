@@ -173,7 +173,7 @@ export default function TabOneScreen() {
           style={[
             styles.scanCard, 
             { 
-              backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED',
+              backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED',
               borderColor: colors.text 
             }
           ]} 
@@ -181,9 +181,9 @@ export default function TabOneScreen() {
         >
           <View style={[
             styles.scanContent, 
-            { backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED' }
+            { backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED' }
           ]}>
-            <View style={{ backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED' }}>
+            <View style={{ backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED' }}>
               <Text style={[styles.scanTitle, { color: colors.text }]}>Scan A Barcode</Text>
               <Text style={[styles.scanSubtitle, { color: colors.text, opacity: 0.7 }]}>
                 Get started with a quick{'\n'}scan of an item near you.
@@ -191,19 +191,19 @@ export default function TabOneScreen() {
             </View>
             <View style={[
               styles.barcodeIcon, 
-              { backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED' }
+              { backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED' }
             ]}>
               <View style={[
                 styles.cornerTL, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
               <View style={[
                 styles.cornerTR, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
@@ -211,14 +211,14 @@ export default function TabOneScreen() {
               <View style={[
                 styles.cornerBL, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
               <View style={[
                 styles.cornerBR, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? colors.card : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#8ee8b5' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
