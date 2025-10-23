@@ -11,6 +11,7 @@ import {
   Alert,
   Animated,
   PanResponder,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/templateColors';
@@ -34,98 +35,93 @@ const SwipeableItem = ({
   onSwipeStart: () => void;
   onSwipeEnd: () => void;
 }) => {
-  const translateX = useRef(new Animated.Value(0)).current;
+  const windowWidth = useWindowDimensions().width;
+  const cardWidth = windowWidth - 32; // Account for padding
+  const deleteButtonWidth = 100;
+  
+  const width = useRef(new Animated.Value(cardWidth)).current;
   const [isOpen, setIsOpen] = useState(false);
   const colors = Colors[colorScheme];
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only respond if the movement is primarily horizontal
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
         return isHorizontal && Math.abs(gestureState.dx) > 2;
       },
       onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        // Capture the gesture if it's clearly horizontal
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
         return isHorizontal && Math.abs(gestureState.dx) > 5;
       },
       onPanResponderGrant: () => {
-        // Disable FlatList scrolling when swipe starts
         onSwipeStart();
       },
       onPanResponderMove: (_, gestureState) => {
-        // Check if movement is primarily horizontal
         if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
-          // Only allow left swipe (negative dx)
+          // Swiping left reduces width
           if (gestureState.dx < 0) {
-            translateX.setValue(gestureState.dx);
+            const newWidth = Math.max(cardWidth + gestureState.dx, cardWidth - deleteButtonWidth);
+            width.setValue(newWidth);
           } else if (isOpen && gestureState.dx > 0) {
-            // Allow closing swipe when already open
-            translateX.setValue(gestureState.dx - 100);
+            // Swiping right increases width back
+            const newWidth = Math.min(cardWidth - deleteButtonWidth + gestureState.dx, cardWidth);
+            width.setValue(newWidth);
           }
         }
       },
       onPanResponderRelease: (_, gestureState) => {
         const { dx, vx } = gestureState;
         
-        // Re-enable FlatList scrolling
         onSwipeEnd();
         
-        // Check if movement is primarily horizontal
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
         
         if (!isHorizontal) {
-          // If it's not horizontal, snap back to current state
-          Animated.spring(translateX, {
-            toValue: isOpen ? -100 : 0,
-            useNativeDriver: true,
+          Animated.spring(width, {
+            toValue: isOpen ? cardWidth - deleteButtonWidth : cardWidth,
+            useNativeDriver: false,
             tension: 40,
             friction: 8,
           }).start();
           return;
         }
         
-        // Check velocity for quick swipes
         const hasSwipeVelocity = Math.abs(vx) > 0.3;
         
-        // Lower threshold for opening (30px instead of 100px)
         if (dx < -30 || (hasSwipeVelocity && vx < 0)) {
           // Open to reveal delete button
-          Animated.spring(translateX, {
-            toValue: -100,
-            useNativeDriver: true,
+          Animated.spring(width, {
+            toValue: cardWidth - deleteButtonWidth,
+            useNativeDriver: false,
             tension: 40,
             friction: 8,
           }).start();
           setIsOpen(true);
         } else if (dx > 30 || (hasSwipeVelocity && vx > 0)) {
           // Close
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
+          Animated.spring(width, {
+            toValue: cardWidth,
+            useNativeDriver: false,
             tension: 40,
             friction: 8,
           }).start();
           setIsOpen(false);
         } else {
           // Snap back to current state
-          Animated.spring(translateX, {
-            toValue: isOpen ? -100 : 0,
-            useNativeDriver: true,
+          Animated.spring(width, {
+            toValue: isOpen ? cardWidth - deleteButtonWidth : cardWidth,
+            useNativeDriver: false,
             tension: 40,
             friction: 8,
           }).start();
         }
       },
       onPanResponderTerminate: () => {
-        // Re-enable scrolling if gesture is terminated
         onSwipeEnd();
         
-        // Snap back to current state
-        Animated.spring(translateX, {
-          toValue: isOpen ? -100 : 0,
-          useNativeDriver: true,
+        Animated.spring(width, {
+          toValue: isOpen ? cardWidth - deleteButtonWidth : cardWidth,
+          useNativeDriver: false,
           tension: 40,
           friction: 8,
         }).start();
@@ -141,17 +137,14 @@ const SwipeableItem = ({
         { 
           text: 'Cancel', 
           style: 'cancel',
-          onPress: () => {
-            // Keep delete button visible on cancel
-          }
         },
         {
           text: 'Remove',
           onPress: () => {
-            Animated.timing(translateX, {
-              toValue: -400,
+            Animated.timing(width, {
+              toValue: 0,
               duration: 300,
-              useNativeDriver: true,
+              useNativeDriver: false,
             }).start(() => {
               onDelete();
             });
@@ -164,10 +157,9 @@ const SwipeableItem = ({
 
   const handleCardPress = () => {
     if (isOpen) {
-      // Close if open
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: true,
+      Animated.spring(width, {
+        toValue: cardWidth,
+        useNativeDriver: false,
         tension: 40,
         friction: 8,
       }).start();
@@ -189,9 +181,9 @@ const SwipeableItem = ({
       <Animated.View
         style={[
           styles.itemCard,
-          { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#E8EAF6' },
-          {
-            transform: [{ translateX }],
+          { 
+            backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#E8EAF6',
+            width: width,
           },
         ]}
         {...panResponder.panHandlers}
@@ -201,8 +193,19 @@ const SwipeableItem = ({
           onPress={handleCardPress}
           activeOpacity={0.7}
         >
-          <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.itemQuantity, { color: colors.text }]}>{item.quantity}</Text>
+          <Text 
+            style={[styles.itemName, { color: colors.text }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.name}
+          </Text>
+          <Text 
+            style={[styles.itemQuantity, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {item.quantity}
+          </Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -255,12 +258,10 @@ const MyPantryScreen = () => {
   };
 
   const handleSwipeStart = () => {
-    // Disable FlatList scrolling when swiping
     flatListRef.current?.setNativeProps({ scrollEnabled: false });
   };
 
   const handleSwipeEnd = () => {
-    // Re-enable FlatList scrolling after swipe
     flatListRef.current?.setNativeProps({ scrollEnabled: true });
   };
 
@@ -314,10 +315,16 @@ const MyPantryScreen = () => {
 
       {/* Add Button */}
       <TouchableOpacity
-        style={styles.addButton}
+        style={[
+          styles.addButton,
+          { backgroundColor: colorScheme === 'dark' ? '#CDD0E3' : '#371B34' }
+        ]}
         onPress={() => setModalVisible(true)}
       >
-        <Text style={styles.addButtonText}>+ Add Item</Text>
+        <Text style={[
+          styles.addButtonText,
+          { color: colorScheme === 'dark' ? '#371B34' : '#fff' }
+        ]}>+ Add Item</Text>
       </TouchableOpacity>
 
       {/* Add Item Modal */}
@@ -380,10 +387,17 @@ const MyPantryScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
+                style={[
+                  styles.modalButton, 
+                  styles.saveButton,
+                  { backgroundColor: colorScheme === 'dark' ? '#CDD0E3' : '#371B34' }
+                ]}
                 onPress={addItem}
               >
-                <Text style={styles.saveButtonText}>Add</Text>
+                <Text style={[
+                  styles.saveButtonText,
+                  { color: colorScheme === 'dark' ? '#371B34' : '#fff' }
+                ]}>Add</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -418,7 +432,10 @@ const styles = StyleSheet.create({
   swipeableContainer: {
     marginBottom: 12,
     position: 'relative',
-    overflow: 'hidden',
+    height: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   deleteButtonContainer: {
     position: 'absolute',
@@ -426,7 +443,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     width: 100,
   },
   deleteButton: {
@@ -435,8 +452,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: 100,
     height: '100%',
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
+    borderRadius: 12,
   },
   deleteButtonText: {
     color: '#fff',
@@ -446,12 +462,14 @@ const styles = StyleSheet.create({
   itemCard: {
     borderRadius: 12,
     padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    position: 'absolute',
+    left: 0,
+    height: '100%',
+    justifyContent: 'center',
   },
   itemInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
   itemName: {
     fontSize: 18,
@@ -466,7 +484,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#371B34',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 30,
@@ -477,7 +494,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   addButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -527,7 +543,7 @@ const styles = StyleSheet.create({
     // backgroundColor set dynamically
   },
   saveButton: {
-    backgroundColor: '#371B34',
+    // backgroundColor set dynamically
   },
   cancelButtonText: {
     textAlign: 'center',
@@ -538,7 +554,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
   },
 });
 
