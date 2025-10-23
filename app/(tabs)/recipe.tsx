@@ -3,7 +3,7 @@ import { useColorScheme } from 'react-native'
 import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
-import { Colors } from '@/constants/globalStyles';
+import Colors from '@/constants/templateColors';
 import { useRouter } from 'expo-router';
 
 interface Recipe {
@@ -29,7 +29,8 @@ interface Recipe {
 const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
 
 export default function RecipeTabScreen() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,22 +214,28 @@ export default function RecipeTabScreen() {
     <SafeAreaView 
       style={[
         styles.safeArea, 
-        { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+        { backgroundColor: colors.background }
       ]} 
       edges={['top', 'left', 'right']}
     >
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text style={styles.title}>Recipe Recommendations</Text>
           <Text style={styles.subtitle}>Discover delicious meals</Text>
         </View>
         
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
           <TextInput
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              { 
+                backgroundColor: colors.card,
+                color: colors.text
+              }
+            ]}
             placeholder="Search by recipe name or ingredient (min 3 chars)"
-            placeholderTextColor="#999"
+            placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -248,7 +255,7 @@ export default function RecipeTabScreen() {
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
-          style={styles.categoryContainer}
+          style={[styles.categoryContainer, { backgroundColor: colors.background }]}
           contentContainerStyle={styles.categoryContent}
         >
           {CATEGORIES.map((category) => (
@@ -256,7 +263,11 @@ export default function RecipeTabScreen() {
               key={category}
               style={[
                 styles.categoryChip,
-                selectedCategory === category && styles.categoryChipActive
+                {
+                  backgroundColor: selectedCategory === category 
+                    ? colors.buttonBackground 
+                    : (colorScheme === 'dark' ? '#4A4E6B' : '#CDD0E3')
+                }
               ]}
               onPress={() => {
                 setSelectedCategory(category);
@@ -265,7 +276,11 @@ export default function RecipeTabScreen() {
             >
               <Text style={[
                 styles.categoryText,
-                selectedCategory === category && styles.categoryTextActive
+                {
+                  color: selectedCategory === category 
+                    ? colors.buttonText 
+                    : (colorScheme === 'dark' ? '#fff' : '#371B34')
+                }
               ]}>
                 {category}
               </Text>
@@ -275,13 +290,13 @@ export default function RecipeTabScreen() {
 
         {/* Recipe List */}
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#371B34" />
+          <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+            <ActivityIndicator size="large" color={colors.buttonBackground} />
             <Text style={styles.loadingText}>Loading recipes...</Text>
           </View>
         ) : (
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <View style={styles.recipeGrid}>
+            <View style={[styles.recipeGrid, { backgroundColor: colors.background }]}>
               {displayedRecipes.length > 0 ? (
                 displayedRecipes.map((recipe) => {
                   return (
@@ -298,7 +313,7 @@ export default function RecipeTabScreen() {
                         />
                       </View>
                       
-                      <View style={styles.recipeInfo}>
+                      <View style={[styles.recipeInfo, { backgroundColor: colors.card }]}>
                         <Text style={styles.recipeName} numberOfLines={2}>
                           {recipe.strMeal}
                         </Text>
@@ -306,11 +321,17 @@ export default function RecipeTabScreen() {
                         <RNView style={styles.recipeDetails}>
                           <RNView style={styles.detailItem}>
                             <Text style={styles.detailIcon}>🌍</Text>
-                            <Text style={styles.detailText}>{recipe.strArea}</Text>
+                            <Text style={[styles.detailText, { color: colors.text }]}>{recipe.strArea}</Text>
                           </RNView>
                           
-                          <RNView style={styles.categoryBadge}>
-                            <Text style={styles.categoryBadgeText}>{recipe.strCategory}</Text>
+                          <RNView style={[
+                            styles.categoryBadge,
+                            { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : 'rgba(0, 122, 255, 0.1)' }
+                          ]}>
+                            <Text style={[
+                              styles.categoryBadgeText,
+                              { color: colorScheme === 'dark' ? '#fff' : '#007AFF' }
+                            ]}>{recipe.strCategory}</Text>
                           </RNView>
                         </RNView>
                       </View>
@@ -318,7 +339,7 @@ export default function RecipeTabScreen() {
                   );
                 })
               ) : (
-                <View style={styles.emptyState}>
+                <View style={[styles.emptyState, { backgroundColor: colors.background }]}>
                   <Text style={styles.emptyStateText}>No recipes found</Text>
                   <Text style={styles.emptyStateSubtext}>
                     {searchQuery.length > 0 && searchQuery.length < 3 
@@ -344,7 +365,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 10,
   },
   title: {
@@ -363,11 +384,9 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     height: 50,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     borderRadius: 12,
     paddingHorizontal: 15,
     fontSize: 16,
-    color: '#000',
   },
   clearButton: {
     position: 'absolute',
@@ -395,22 +414,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#CDD0E3',
     marginRight: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  categoryChipActive: {
-    backgroundColor: '#371B34',
-  },
   categoryText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#371B34',
     textAlign: 'center',
-  },
-  categoryTextActive: {
-    color: '#FFF',
   },
   loadingContainer: {
     flex: 1,
@@ -450,7 +461,6 @@ const styles = StyleSheet.create({
   },
   recipeInfo: {
     padding: 15,
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
   },
@@ -463,11 +473,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 15,
+    backgroundColor: 'transparent',
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
+    backgroundColor: 'transparent',
   },
   detailIcon: {
     fontSize: 14,
@@ -480,12 +492,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   categoryBadgeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#007AFF',
   },
   emptyState: {
     alignItems: 'center',

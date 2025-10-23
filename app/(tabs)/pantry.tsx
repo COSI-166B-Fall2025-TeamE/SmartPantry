@@ -36,7 +36,7 @@ const SwipeableItem = ({
   onSwipeEnd: () => void;
 }) => {
   const windowWidth = useWindowDimensions().width;
-  const cardWidth = windowWidth - 32; // Account for padding
+  const cardWidth = windowWidth - 32;
   const deleteButtonWidth = 100;
   
   const width = useRef(new Animated.Value(cardWidth)).current;
@@ -58,12 +58,10 @@ const SwipeableItem = ({
       },
       onPanResponderMove: (_, gestureState) => {
         if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
-          // Swiping left reduces width
           if (gestureState.dx < 0) {
             const newWidth = Math.max(cardWidth + gestureState.dx, cardWidth - deleteButtonWidth);
             width.setValue(newWidth);
           } else if (isOpen && gestureState.dx > 0) {
-            // Swiping right increases width back
             const newWidth = Math.min(cardWidth - deleteButtonWidth + gestureState.dx, cardWidth);
             width.setValue(newWidth);
           }
@@ -89,7 +87,6 @@ const SwipeableItem = ({
         const hasSwipeVelocity = Math.abs(vx) > 0.3;
         
         if (dx < -30 || (hasSwipeVelocity && vx < 0)) {
-          // Open to reveal delete button
           Animated.spring(width, {
             toValue: cardWidth - deleteButtonWidth,
             useNativeDriver: false,
@@ -98,7 +95,6 @@ const SwipeableItem = ({
           }).start();
           setIsOpen(true);
         } else if (dx > 30 || (hasSwipeVelocity && vx > 0)) {
-          // Close
           Animated.spring(width, {
             toValue: cardWidth,
             useNativeDriver: false,
@@ -107,7 +103,6 @@ const SwipeableItem = ({
           }).start();
           setIsOpen(false);
         } else {
-          // Snap back to current state
           Animated.spring(width, {
             toValue: isOpen ? cardWidth - deleteButtonWidth : cardWidth,
             useNativeDriver: false,
@@ -182,7 +177,7 @@ const SwipeableItem = ({
         style={[
           styles.itemCard,
           { 
-            backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#E8EAF6',
+            backgroundColor: colors.card,
             width: width,
           },
         ]}
@@ -291,7 +286,7 @@ const MyPantryScreen = () => {
         style={[
           styles.searchBar,
           { 
-            backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : 'rgba(128, 128, 128, 0.1)',
+            backgroundColor: colors.card,
             color: colors.text
           }
         ]}
@@ -317,13 +312,13 @@ const MyPantryScreen = () => {
       <TouchableOpacity
         style={[
           styles.addButton,
-          { backgroundColor: colorScheme === 'dark' ? '#CDD0E3' : '#371B34' }
+          { backgroundColor: colors.buttonBackground }
         ]}
         onPress={() => setModalVisible(true)}
       >
         <Text style={[
           styles.addButtonText,
-          { color: colorScheme === 'dark' ? '#371B34' : '#fff' }
+          { color: colors.buttonText }
         ]}>+ Add Item</Text>
       </TouchableOpacity>
 
@@ -337,7 +332,7 @@ const MyPantryScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={[
             styles.modalContent,
-            { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#fff' }
+            { backgroundColor: colors.card }
           ]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Item</Text>
 
@@ -345,8 +340,8 @@ const MyPantryScreen = () => {
               style={[
                 styles.input,
                 { 
-                  borderColor: colorScheme === 'dark' ? '#3A3A3C' : '#e0e0e0',
-                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#fff',
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
                   color: colors.text
                 }
               ]}
@@ -360,8 +355,8 @@ const MyPantryScreen = () => {
               style={[
                 styles.input,
                 { 
-                  borderColor: colorScheme === 'dark' ? '#3A3A3C' : '#e0e0e0',
-                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#fff',
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
                   color: colors.text
                 }
               ]}
@@ -376,13 +371,13 @@ const MyPantryScreen = () => {
                 style={[
                   styles.modalButton, 
                   styles.cancelButton,
-                  { backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#f0f0f0' }
+                  { backgroundColor: colors.secondaryButton }
                 ]}
                 onPress={() => setModalVisible(false)}
               >
                 <Text style={[
                   styles.cancelButtonText,
-                  { color: colorScheme === 'dark' ? '#fff' : '#666' }
+                  { color: colors.secondaryButtonText }
                 ]}>Cancel</Text>
               </TouchableOpacity>
 
@@ -390,13 +385,13 @@ const MyPantryScreen = () => {
                 style={[
                   styles.modalButton, 
                   styles.saveButton,
-                  { backgroundColor: colorScheme === 'dark' ? '#CDD0E3' : '#371B34' }
+                  { backgroundColor: colors.buttonBackground }
                 ]}
                 onPress={addItem}
               >
                 <Text style={[
                   styles.saveButtonText,
-                  { color: colorScheme === 'dark' ? '#371B34' : '#fff' }
+                  { color: colors.buttonText }
                 ]}>Add</Text>
               </TouchableOpacity>
             </View>
