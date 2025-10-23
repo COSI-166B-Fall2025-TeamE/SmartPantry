@@ -13,13 +13,12 @@ import {
   PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Colors from '@/constants/templateColors'; 
+import Colors from '../../constants/templateColors';
 
 interface PantryItem {
   id: string;
   name: string;
   quantity: string;
-  category: string;
 }
 
 const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDelete: () => void; colorScheme: 'light' | 'dark' }) => {
@@ -108,7 +107,6 @@ const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDe
         <View style={[styles.itemInfo, { backgroundColor: 'transparent' }]}>
           <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
           <Text style={[styles.itemQuantity, { color: colors.text }]}>{item.quantity}</Text>
-          <Text style={[styles.itemCategory, { color: colors.tint }]}>{item.category}</Text>
         </View>
       </Animated.View>
     </View>
@@ -120,21 +118,20 @@ const MyPantryScreen = () => {
   const colors = Colors[colorScheme];
   
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([
-    { id: '1', name: 'Flour', quantity: '2 kg', category: 'Grains' },
-    { id: '2', name: 'Sugar', quantity: '1 kg', category: 'Grains' },
-    { id: '3', name: 'Olive Oil', quantity: '500 ml', category: 'Oils' },
-    { id: '4', name: 'Tomatoes', quantity: '6 pcs', category: 'Produce' },
-    { id: '5', name: 'Milk', quantity: '1 L', category: 'Dairy' },
-    { id: '6', name: 'Chicken Breast', quantity: '500 g', category: 'Proteins' },
-    { id: '7', name: 'Rice', quantity: '3 kg', category: 'Grains' },
-    { id: '8', name: 'Eggs', quantity: '12 pcs', category: 'Dairy' },
+    { id: '1', name: 'Flour', quantity: '2 kg' },
+    { id: '2', name: 'Sugar', quantity: '1 kg' },
+    { id: '3', name: 'Olive Oil', quantity: '500 ml' },
+    { id: '4', name: 'Tomatoes', quantity: '6 pcs' },
+    { id: '5', name: 'Milk', quantity: '1 L' },
+    { id: '6', name: 'Chicken Breast', quantity: '500 g' },
+    { id: '7', name: 'Rice', quantity: '3 kg' },
+    { id: '8', name: 'Eggs', quantity: '12 pcs' },
   ]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState('');
 
   const filteredItems = pantryItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -146,12 +143,10 @@ const MyPantryScreen = () => {
         id: Date.now().toString(),
         name: newItemName,
         quantity: newItemQuantity,
-        category: newItemCategory || 'Other',
       };
       setPantryItems([...pantryItems, newItem]);
       setNewItemName('');
       setNewItemQuantity('');
-      setNewItemCategory('');
       setModalVisible(false);
     } else {
       Alert.alert('Error', 'Please fill in all fields');
@@ -259,21 +254,6 @@ const MyPantryScreen = () => {
               onChangeText={setNewItemQuantity}
             />
 
-            <TextInput
-              style={[
-                styles.input,
-                { 
-                  borderColor: colorScheme === 'dark' ? '#3A3A3C' : '#e0e0e0',
-                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#fff',
-                  color: colors.text
-                }
-              ]}
-              placeholder="Category (e.g., Grains, Dairy)"
-              placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
-              value={newItemCategory}
-              onChangeText={setNewItemCategory}
-            />
-
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[
@@ -371,11 +351,6 @@ const styles = StyleSheet.create({
   itemQuantity: {
     fontSize: 13,
     opacity: 0.7,
-    marginBottom: 4,
-  },
-  itemCategory: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   addButton: {
     position: 'absolute',
