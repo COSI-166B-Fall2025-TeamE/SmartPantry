@@ -1,7 +1,7 @@
 import { Text, View } from '@/components/Themed';
-import { expirationItems } from '@/data/ItemsList';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
+import { fetchAllData } from './DatabaseFunctions';
 
 interface ExpirationItem {
   id: string;
@@ -16,6 +16,25 @@ interface ExpirationItemsProps {
 }
 
 const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemPress }) => {
+  
+  const [expirationItems, setItems] = useState([]);
+
+  // Fetch all items on component mount
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    const result = await fetchAllData('expiration');
+    if (result.success) {
+      setItems(result.data);
+      // console.log('Items loaded:', result.data);
+    } else {
+      console.error('Error loading items:', result.error);
+    }
+  };
+  
+  
   const filteredItems = selectedDate 
     ? expirationItems.filter(item => item.expirationDate === selectedDate)
     : [];

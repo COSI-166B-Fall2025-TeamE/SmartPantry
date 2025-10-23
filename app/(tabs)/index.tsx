@@ -1,17 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Pressable, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native'; // <-- CHANGED (Added Alert)
+import { Alert, Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'; // <-- CHANGED (Added Alert)
 
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
 import { Link, router } from 'expo-router'; // <-- CHANGED (Imported router)
-import { useState } from 'react'; //
+import { useEffect, useState } from 'react'; //
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 
+import { fetchAllData } from '@/components/DatabaseFunctions';
 import EditScreenInfo from '@/components/EditScreenInfo';
-import { expirationItems } from '@/data/ItemsList';
+// import { expirationItems } from '@/data/ItemsList';
 
 
 
@@ -34,7 +35,25 @@ export default function TabOneScreen() {
   //{ id: '3', name: 'Bread', expirationDate: '10/10/2025' },
   //]);
 
-  const [items, setItems] = useState<Item[]>([]);
+  // const [items, setItems] = useState<Item[]>([]);
+
+
+  const [expirationItems, setItems] = useState([]);
+
+  // Fetch all items on component mount
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    const result = await fetchAllData('expiration');
+    if (result.success) {
+      setItems(result.data);
+      // console.log('Items loaded:', result.data);
+    } else {
+      console.error('Error loading items:', result.error);
+    }
+  };
 
   //const userNames = [
   //'Alex', 'Bailey', 'Casey', 'Drew', 'Emery', 'Finley', 'Harley', 'Indigo',

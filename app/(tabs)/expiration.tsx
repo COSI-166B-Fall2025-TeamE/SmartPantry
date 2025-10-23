@@ -1,6 +1,6 @@
+import { fetchAllData } from '@/components/DatabaseFunctions';
 import ExpirationItems from '@/components/ExpirationItems';
 import { Text, View } from '@/components/Themed';
-import { expirationItems } from '@/data/ItemsList';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
@@ -20,9 +20,21 @@ export default function ExpirationTabScreen() {
   const [searchResults, setSearchResults] = useState<ExpirationItem[]>([]);
 
   const today = new Date().toISOString().split('T')[0];
-  const itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
+  var itemsExpiringToday = [];
   
+
+  const [expirationItems, setItems] = useState([]);
+
+  // Fetch all items on component mount
   useEffect(() => {
+    loadItems();
+  }, []);
+
+  useEffect(() => {
+
+    itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
+    console.log("itemsExpiringToday", itemsExpiringToday)
+
     const newMarkedDates: {[date: string]: any} = {};
     
     expirationItems.forEach(item => {
@@ -38,9 +50,20 @@ export default function ExpirationTabScreen() {
     });
 
     setMarkedDates(newMarkedDates);
-  }, []);
+  }, [expirationItems]);
 
-    useEffect(() => {
+
+  const loadItems = async () => {
+    const result = await fetchAllData('expiration');
+    if (result.success) {
+      setItems(result.data);
+      // console.log('Items loaded:', result.data);
+    } else {
+      console.error('Error loading items:', result.error);
+    }
+  };
+
+  useEffect(() => {
     if (searchQuery.trim() === '') {
       setSearchResults([]);
     } else {
@@ -129,10 +152,10 @@ export default function ExpirationTabScreen() {
         )}
 
         <Text style={styles.todayInfo}>
-          {itemsExpiringToday.length > 0 
+          {expirationItems.filter(item => item.expirationDate === today).length > 0 
             ? <>
                 Expires today ({today}): 
-                {itemsExpiringToday.map((item, index) => (
+                {expirationItems.filter(item => item.expirationDate === today).map((item, index) => (
                   <Text key={item.id}>
                     {index > 0 && ', '}
                     <Text style={styles.boldItemName}>{item.name}</Text>
