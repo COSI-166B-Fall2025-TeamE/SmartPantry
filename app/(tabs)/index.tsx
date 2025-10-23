@@ -1,11 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native'; // <-- CHANGED (Added Alert)
 
 import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router'; // <-- CHANGED (Imported router)
 import { useState } from 'react'; //
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,7 +25,7 @@ interface Item  {
 export default function TabOneScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
-  const isPermissionGranted = Boolean(permission?.granted);
+  // const isPermissionGranted = Boolean(permission?.granted); // We don't need this line anymore
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
 
   //const [items] = useState<FoodItem[]>([
@@ -52,6 +52,25 @@ export default function TabOneScreen() {
   const now = new Date();
   const currentDate = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
   //const currentDate = 'SEPTEMBER 29, 2025';
+
+  // --- THIS IS THE NEW HANDLER FUNCTION --- // <-- CHANGED
+  const handleScanPress = async () => {
+    let currentPermission = permission;
+    
+    // If we don't have permission details yet, or it's not granted, request it
+    if (!currentPermission?.granted) {
+      currentPermission = await requestPermission();
+    }
+    
+    // If permission is granted (either before or just now), navigate
+    if (currentPermission.granted) {
+      router.push('/scan');
+    } else {
+      // Optional: Handle the case where permission is denied
+      Alert.alert('Permission Denied', 'Camera permission is required to scan barcodes.');
+    }
+  };
+
 
   return (
     <SafeAreaProvider>
@@ -137,7 +156,7 @@ export default function TabOneScreen() {
                     <Text style={styles.sidebarItemText}>Show current shopping list</Text>
                   </TouchableOpacity>
 
-                  <Link href="/grocery" asChild>
+                  <Link href="/recipe" asChild>
                   <TouchableOpacity 
                       style={styles.sidebarItem}
                       onPress={() => setIsSidebarVisible(false)}
@@ -163,7 +182,8 @@ export default function TabOneScreen() {
         </View>
 
         {/* Scan Barcode Card */}
-        <Pressable style={styles.scanCard} onPress={requestPermission} disabled={isPermissionGranted}>
+        {/* // <-- CHANGED (onPress and removed 'disabled') */}
+        <Pressable style={styles.scanCard} onPress={handleScanPress}>
           <View style={[styles.scanContent, { backgroundColor: Colors.primaryCard }]}>
             <View style={{ backgroundColor: Colors.primaryCard }}>
               <Text style={styles.scanTitle}>Scan A Barcode</Text>
@@ -180,13 +200,8 @@ export default function TabOneScreen() {
             </View>
           </View>
         </Pressable>
-                {isPermissionGranted && (
-                  <Link href="/scan" asChild>
-                    <Pressable>
-                      <Text style={styles.linkText}>CONTINUE SCANNING.</Text>
-                    </Pressable>
-                  </Link>
-                )}
+        
+        {/* // <-- CHANGED (Removed the old "CONTINUE SCANNING" Link) */}
 
         {/* OR Divider */}
         <View style={styles.dividerContainer}>
@@ -238,6 +253,7 @@ export default function TabOneScreen() {
   );
 }
 
+// ... styles remain the same
 const styles = StyleSheet.create({
   
   container: {
