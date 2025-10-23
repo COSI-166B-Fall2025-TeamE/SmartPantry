@@ -21,32 +21,114 @@ interface PantryItem {
   quantity: string;
 }
 
-const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDelete: () => void; colorScheme: 'light' | 'dark' }) => {
+const SwipeableItem = ({ 
+  item, 
+  onDelete, 
+  colorScheme,
+  onSwipeStart,
+  onSwipeEnd 
+}: { 
+  item: PantryItem; 
+  onDelete: () => void; 
+  colorScheme: 'light' | 'dark';
+  onSwipeStart: () => void;
+  onSwipeEnd: () => void;
+}) => {
   const translateX = useRef(new Animated.Value(0)).current;
+  const [isOpen, setIsOpen] = useState(false);
   const colors = Colors[colorScheme];
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 5;
+        // Only respond if the movement is primarily horizontal
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        return isHorizontal && Math.abs(gestureState.dx) > 2;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        // Capture the gesture if it's clearly horizontal
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
+        return isHorizontal && Math.abs(gestureState.dx) > 5;
+      },
+      onPanResponderGrant: () => {
+        // Disable FlatList scrolling when swipe starts
+        onSwipeStart();
       },
       onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0) {
-          translateX.setValue(gestureState.dx);
+        // Check if movement is primarily horizontal
+        if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
+          // Only allow left swipe (negative dx)
+          if (gestureState.dx < 0) {
+            translateX.setValue(gestureState.dx);
+          } else if (isOpen && gestureState.dx > 0) {
+            // Allow closing swipe when already open
+            translateX.setValue(gestureState.dx - 100);
+          }
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -100) {
+        const { dx, vx } = gestureState;
+        
+        // Re-enable FlatList scrolling
+        onSwipeEnd();
+        
+        // Check if movement is primarily horizontal
+        const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        
+        if (!isHorizontal) {
+          // If it's not horizontal, snap back to current state
+          Animated.spring(translateX, {
+            toValue: isOpen ? -100 : 0,
+            useNativeDriver: true,
+            tension: 40,
+            friction: 8,
+          }).start();
+          return;
+        }
+        
+        // Check velocity for quick swipes
+        const hasSwipeVelocity = Math.abs(vx) > 0.3;
+        
+        // Lower threshold for opening (30px instead of 100px)
+        if (dx < -30 || (hasSwipeVelocity && vx < 0)) {
+          // Open to reveal delete button
           Animated.spring(translateX, {
             toValue: -100,
             useNativeDriver: true,
+            tension: 40,
+            friction: 8,
           }).start();
-        } else {
+          setIsOpen(true);
+        } else if (dx > 30 || (hasSwipeVelocity && vx > 0)) {
+          // Close
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
+            tension: 40,
+            friction: 8,
+          }).start();
+          setIsOpen(false);
+        } else {
+          // Snap back to current state
+          Animated.spring(translateX, {
+            toValue: isOpen ? -100 : 0,
+            useNativeDriver: true,
+            tension: 40,
+            friction: 8,
           }).start();
         }
+      },
+      onPanResponderTerminate: () => {
+        // Re-enable scrolling if gesture is terminated
+        onSwipeEnd();
+        
+        // Snap back to current state
+        Animated.spring(translateX, {
+          toValue: isOpen ? -100 : 0,
+          useNativeDriver: true,
+          tension: 40,
+          friction: 8,
+        }).start();
       },
     })
   ).current;
@@ -60,10 +142,7 @@ const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDe
           text: 'Cancel', 
           style: 'cancel',
           onPress: () => {
-            Animated.spring(translateX, {
-              toValue: 0,
-              useNativeDriver: true,
-            }).start();
+            // Keep delete button visible on cancel
           }
         },
         {
@@ -81,6 +160,19 @@ const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDe
         },
       ]
     );
+  };
+
+  const handleCardPress = () => {
+    if (isOpen) {
+      // Close if open
+      Animated.spring(translateX, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 40,
+        friction: 8,
+      }).start();
+      setIsOpen(false);
+    }
   };
 
   return (
@@ -104,10 +196,14 @@ const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDe
         ]}
         {...panResponder.panHandlers}
       >
-        <View style={[styles.itemInfo, { backgroundColor: 'transparent' }]}>
+        <TouchableOpacity 
+          style={[styles.itemInfo, { backgroundColor: 'transparent' }]}
+          onPress={handleCardPress}
+          activeOpacity={0.7}
+        >
           <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
           <Text style={[styles.itemQuantity, { color: colors.text }]}>{item.quantity}</Text>
-        </View>
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -116,6 +212,7 @@ const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDe
 const MyPantryScreen = () => {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const flatListRef = useRef<FlatList>(null);
   
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([
     { id: '1', name: 'Flour', quantity: '2 kg' },
@@ -157,11 +254,23 @@ const MyPantryScreen = () => {
     setPantryItems(pantryItems.filter((item) => item.id !== id));
   };
 
+  const handleSwipeStart = () => {
+    // Disable FlatList scrolling when swiping
+    flatListRef.current?.setNativeProps({ scrollEnabled: false });
+  };
+
+  const handleSwipeEnd = () => {
+    // Re-enable FlatList scrolling after swipe
+    flatListRef.current?.setNativeProps({ scrollEnabled: true });
+  };
+
   const renderItem = ({ item }: { item: PantryItem }) => (
     <SwipeableItem
       item={item}
       onDelete={() => removeItem(item.id)}
       colorScheme={colorScheme}
+      onSwipeStart={handleSwipeStart}
+      onSwipeEnd={handleSwipeEnd}
     />
   );
 
@@ -193,6 +302,7 @@ const MyPantryScreen = () => {
 
       {/* Pantry Items List */}
       <FlatList
+        ref={flatListRef}
         data={filteredItems}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
