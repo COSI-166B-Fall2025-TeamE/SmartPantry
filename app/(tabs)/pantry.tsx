@@ -13,6 +13,7 @@ import {
   PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Colors from '@/constants/templateColors'; 
 
 interface PantryItem {
   id: string;
@@ -21,30 +22,27 @@ interface PantryItem {
   category: string;
 }
 
-const SwipeableItem = ({ item, onDelete }: { item: PantryItem; onDelete: () => void }) => {
+const SwipeableItem = ({ item, onDelete, colorScheme }: { item: PantryItem; onDelete: () => void; colorScheme: 'light' | 'dark' }) => {
   const translateX = useRef(new Animated.Value(0)).current;
+  const colors = Colors[colorScheme];
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only respond to horizontal swipes
         return Math.abs(gestureState.dx) > 5;
       },
       onPanResponderMove: (_, gestureState) => {
-        // Only allow left swipe (negative dx)
         if (gestureState.dx < 0) {
           translateX.setValue(gestureState.dx);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dx < -100) {
-          // Swipe threshold met - show delete button
           Animated.spring(translateX, {
             toValue: -100,
             useNativeDriver: true,
           }).start();
         } else {
-          // Snap back
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
@@ -63,7 +61,6 @@ const SwipeableItem = ({ item, onDelete }: { item: PantryItem; onDelete: () => v
           text: 'Cancel', 
           style: 'cancel',
           onPress: () => {
-            // Snap back on cancel
             Animated.spring(translateX, {
               toValue: 0,
               useNativeDriver: true,
@@ -101,6 +98,7 @@ const SwipeableItem = ({ item, onDelete }: { item: PantryItem; onDelete: () => v
       <Animated.View
         style={[
           styles.itemCard,
+          { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#E8EAF6' },
           {
             transform: [{ translateX }],
           },
@@ -108,9 +106,9 @@ const SwipeableItem = ({ item, onDelete }: { item: PantryItem; onDelete: () => v
         {...panResponder.panHandlers}
       >
         <View style={[styles.itemInfo, { backgroundColor: 'transparent' }]}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemQuantity}>{item.quantity}</Text>
-          <Text style={styles.itemCategory}>{item.category}</Text>
+          <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
+          <Text style={[styles.itemQuantity, { color: colors.text }]}>{item.quantity}</Text>
+          <Text style={[styles.itemCategory, { color: colors.tint }]}>{item.category}</Text>
         </View>
       </Animated.View>
     </View>
@@ -118,7 +116,9 @@ const SwipeableItem = ({ item, onDelete }: { item: PantryItem; onDelete: () => v
 };
 
 const MyPantryScreen = () => {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
+  
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([
     { id: '1', name: 'Flour', quantity: '2 kg', category: 'Grains' },
     { id: '2', name: 'Sugar', quantity: '1 kg', category: 'Grains' },
@@ -136,12 +136,10 @@ const MyPantryScreen = () => {
   const [newItemQuantity, setNewItemQuantity] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('');
 
-  // Filter items based on search term
   const filteredItems = pantryItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Add new item
   const addItem = () => {
     if (newItemName && newItemQuantity) {
       const newItem = {
@@ -160,16 +158,15 @@ const MyPantryScreen = () => {
     }
   };
 
-  // Remove item
   const removeItem = (id: string) => {
     setPantryItems(pantryItems.filter((item) => item.id !== id));
   };
 
-  // Render each pantry item
   const renderItem = ({ item }: { item: PantryItem }) => (
     <SwipeableItem
       item={item}
       onDelete={() => removeItem(item.id)}
+      colorScheme={colorScheme}
     />
   );
 
@@ -177,20 +174,26 @@ const MyPantryScreen = () => {
     <SafeAreaView 
       style={[
         styles.container,
-        { backgroundColor: colorScheme === 'dark' ? '#000' : '#fff' }
+        { backgroundColor: colors.background }
       ]}
       edges={['top', 'left', 'right']}
     >
       {/* Header */}
-      <Text style={styles.header}>My Pantry</Text>
+      <Text style={[styles.header, { color: colors.text }]}>My Pantry</Text>
 
       {/* Search Bar */}
       <TextInput
-        style={styles.searchBar}
+        style={[
+          styles.searchBar,
+          { 
+            backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : 'rgba(128, 128, 128, 0.1)',
+            color: colors.text
+          }
+        ]}
         placeholder="Search ingredients..."
         value={searchTerm}
         onChangeText={setSearchTerm}
-        placeholderTextColor="#999"
+        placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
       />
 
       {/* Pantry Items List */}
@@ -200,7 +203,7 @@ const MyPantryScreen = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No items found</Text>
+          <Text style={[styles.emptyText, { color: colors.text }]}>No items found</Text>
         }
       />
 
@@ -220,39 +223,70 @@ const MyPantryScreen = () => {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Item</Text>
+          <View style={[
+            styles.modalContent,
+            { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#fff' }
+          ]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Item</Text>
 
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                { 
+                  borderColor: colorScheme === 'dark' ? '#3A3A3C' : '#e0e0e0',
+                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#fff',
+                  color: colors.text
+                }
+              ]}
               placeholder="Item name"
-              placeholderTextColor="#999"
+              placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
               value={newItemName}
               onChangeText={setNewItemName}
             />
 
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                { 
+                  borderColor: colorScheme === 'dark' ? '#3A3A3C' : '#e0e0e0',
+                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#fff',
+                  color: colors.text
+                }
+              ]}
               placeholder="Quantity (e.g., 2 kg, 500 ml)"
-              placeholderTextColor="#999"
+              placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
               value={newItemQuantity}
               onChangeText={setNewItemQuantity}
             />
 
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                { 
+                  borderColor: colorScheme === 'dark' ? '#3A3A3C' : '#e0e0e0',
+                  backgroundColor: colorScheme === 'dark' ? '#2C2C2E' : '#fff',
+                  color: colors.text
+                }
+              ]}
               placeholder="Category (e.g., Grains, Dairy)"
-              placeholderTextColor="#999"
+              placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
               value={newItemCategory}
               onChangeText={setNewItemCategory}
             />
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[
+                  styles.modalButton, 
+                  styles.cancelButton,
+                  { backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#f0f0f0' }
+                ]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={[
+                  styles.cancelButtonText,
+                  { color: colorScheme === 'dark' ? '#fff' : '#666' }
+                ]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -283,7 +317,6 @@ const styles = StyleSheet.create({
   searchBar: {
     margin: 16,
     padding: 12,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     borderRadius: 12,
     fontSize: 16,
     borderWidth: 0,
@@ -321,7 +354,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   itemCard: {
-    backgroundColor: '#E8EAF6',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -335,18 +367,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
-    color: '#000',
   },
   itemQuantity: {
     fontSize: 13,
     opacity: 0.7,
     marginBottom: 4,
-    color: '#000',
   },
   itemCategory: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#007AFF',
   },
   addButton: {
     position: 'absolute',
@@ -381,7 +410,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     width: '85%',
@@ -394,7 +422,6 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -412,7 +439,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    // backgroundColor set dynamically
   },
   saveButton: {
     backgroundColor: '#371B34',
@@ -421,7 +448,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
   },
   saveButtonText: {
     textAlign: 'center',
