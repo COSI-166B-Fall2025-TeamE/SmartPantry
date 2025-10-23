@@ -230,7 +230,7 @@ export default function RecipeTabScreen() {
             style={[
               styles.searchInput,
               { 
-                backgroundColor: colors.card,
+                backgroundColor: colors.searchBar,
                 color: colors.text
               }
             ]}

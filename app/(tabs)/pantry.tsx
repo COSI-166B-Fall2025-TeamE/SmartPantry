@@ -286,7 +286,7 @@ const MyPantryScreen = () => {
         style={[
           styles.searchBar,
           { 
-            backgroundColor: colors.card,
+            backgroundColor: colors.searchBar,
             color: colors.text
           }
         ]}
@@ -332,7 +332,7 @@ const MyPantryScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={[
             styles.modalContent,
-            { backgroundColor: colors.card }
+            { backgroundColor: colors.background }
           ]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Item</Text>
 
