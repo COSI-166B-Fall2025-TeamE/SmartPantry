@@ -226,7 +226,6 @@ export default function TabOneScreen() {
           </View>
         </Pressable>
 
-
         {/* OR Divider */}
         <View style={styles.dividerContainer}>
           <Text style={[styles.dividerText, { color: colors.text, opacity: 0.5 }]}>OR</Text>
@@ -277,7 +276,13 @@ export default function TabOneScreen() {
         >
           {expirationItems && expirationItems.length > 0 ? (
             expirationItems.map((item) => (
-              <View key={item.id} style={[styles.itemContainer, { backgroundColor: colors.card }]}>
+              <View 
+                key={item.id} 
+                style={[
+                  styles.itemContainer, 
+                  { backgroundColor: colorScheme === 'dark' ? colors.card : '#FFBFBF' }
+                ]}
+              >
                 <View style={[
                   styles.itemImagePlaceholder,
                   { 
@@ -460,7 +465,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
+    gap: 28,
   },
 
   manualButtonTextContainer: {
@@ -475,7 +480,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     lineHeight: 24,
-    textAlign: 'center',
+    textAlign: 'left',
   },
 
   // Expiring Soon Section
