@@ -10,8 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { fetchAllData } from './DatabaseFunctions';
+import { deleteById, fetchAllData, insertData } from './DatabaseFunctions';
 
+type GroceryItem = {
+  id: string;
+  text: string;
+  completed: boolean;
+};
 
 const getExpiryColor = (expiryDays: number) => {
   if (expiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
@@ -23,8 +28,29 @@ const getExpiryColor = (expiryDays: number) => {
   return '#4CAF50'; // Green for 3+ months
 };
 
+function daysDifference(dateString: string): number {
+  // Parse the input date string
+  const targetDate = new Date(dateString);
+  
+  // construct date
+  const now = new Date();
+  
+  // Reset time to midnight for both dates to get accurate day difference
+  targetDate.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  
+  // Calculate difference in milliseconds
+  const diffInMs = targetDate.getTime() - now.getTime();
+  
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  // Convert to days
+  const diffInDays = Math.round(diffInMs / (MS_PER_DAY));
+  
+  return diffInDays;
+}
+
 export default function GroceryList() {
-  const [items, setItems] = useState<Array<{ id: string; text: string; completed: boolean }>>([]);
+  const [items, setItems] = useState<Array<GroceryItem>>([]);
   const [inputText, setInputText] = useState('');
 
   const [suggestions, setExpirationSuggestions] = useState([]);
@@ -34,33 +60,18 @@ export default function GroceryList() {
     loadItems(items);
   }, [items]);
 
+  useEffect(() => {
+    loadGroceryList()
+  }, [])
+
+  const loadGroceryList = async () => {
+    const groceryResult = await fetchAllData('groceryList');
+    setItems(groceryResult.data)
+  };
+  
   const loadItems = async (currentGroceryItems) => {
     const result = await fetchAllData('expiration');
     if (result.success){
-        function daysDifference(dateString: string): number {
-          // Parse the input date string
-          const targetDate = new Date(dateString);
-          
-
-          // construct date
-          const now = new Date();
-          
-          // Reset time to midnight for both dates to get accurate day difference
-          targetDate.setHours(0, 0, 0, 0);
-          now.setHours(0, 0, 0, 0);
-          
-          // Calculate difference in milliseconds
-          const diffInMs = targetDate.getTime() - now.getTime();
-          
-          const MS_PER_DAY = 1000 * 60 * 60 * 24;
-
-          // Convert to days
-          const diffInDays = Math.round(diffInMs / (MS_PER_DAY));
-          
-          return diffInDays;
-        }
-
-
         const updatedItems = result.data.map((item) => {
           return {
             ...item,
@@ -70,26 +81,23 @@ export default function GroceryList() {
         });
 
         const currentItemTexts = currentGroceryItems.map(item => item.text.toLowerCase());
-        const filteredItems = updatedItems.filter(
+        const sortedFilteredItems = updatedItems.filter(
           suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
-        );
-        const sortedItems = filteredItems.sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
+        ).sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
 
-        setExpirationSuggestions(sortedItems)
+        setExpirationSuggestions(sortedFilteredItems)
     } else {
       console.error('Error loading items:', result.error);
     }
   };
 
-  // React.useEffect(() => {
-  //   setSuggestions(getSuggestions(items));
-  // }, [items]);
-
-  const addItem = (text?: string) => {
+  const addItem = async (text?: string) => {
     const itemText = text || inputText;
     if (itemText && itemText.trim()) {
-      sortItems([...items, { id: Date.now().toString(), text: itemText, completed: false }]);
+      const newItem = { id: Date.now().toString(), text: itemText, completed: false };
+      sortItems([...items, newItem]);
       setInputText('');
+      await insertData('groceryList', newItem);
     }
   };
 
@@ -109,8 +117,9 @@ export default function GroceryList() {
     setItems(sorted);
   }
 
-  const deleteItem = (id: string) => {
+  const deleteItem = async(id: string) => {
     setItems(items.filter(item => item.id !== id));
+    const result = await deleteById('groceryList', id);
   };
 
   const renderItem = ({ item }: { item: { id: string; text: string; completed: boolean } }) => (

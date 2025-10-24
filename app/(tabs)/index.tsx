@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'; // <-- CHANGED (Added Alert)
 
 import { Text, View } from '@/components/Themed';
@@ -157,9 +156,9 @@ export default function TabOneScreen() {
                     style={styles.sidebarItem}
                     onPress={async () => {
                       try {
-                        const storedItems = await AsyncStorage.getItem('groceryList');
-                        if (storedItems) {
-                          const items = JSON.parse(storedItems);
+                        const storedItems = await fetchAllData('groceryList');
+                        if (storedItems.data) {
+                          const items = storedItems.data;
                           const itemsList = items.map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`).join('\n');
                           alert(`Grocery List:\n\n${itemsList || 'No items'}`);
                         } else {

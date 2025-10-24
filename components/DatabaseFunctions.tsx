@@ -63,7 +63,7 @@ export const insertData = async (tableName: string, dataToInsert: any) => {
  * @param id - ID of the row to delete
  * @returns Object with success status or error
  */
-export const deleteById = async (tableName: string, id: number) => {
+export const deleteById = async (tableName: string, id: string) => {
   try {
     const { error } = await supabase
       .from(tableName)

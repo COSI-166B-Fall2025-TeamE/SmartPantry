@@ -54,11 +54,7 @@ export default function ExpirationTabScreen() {
 
   const loadItems = async () => {
     const result = await fetchAllData('expiration');
-    if (result.success) {
-      setItems(result.data);
-    } else {
-      console.error('Error loading items:', result.error);
-    }
+    setItems(result.data);
   };
 
   useEffect(() => {
