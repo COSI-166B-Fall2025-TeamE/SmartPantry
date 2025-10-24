@@ -49,7 +49,6 @@ export default function TabOneScreen() {
     const result = await fetchAllData('expiration');
     if (result.success) {
       setItems(result.data);
-      // console.log('Items loaded:', result.data);
     } else {
       console.error('Error loading items:', result.error);
     }

@@ -65,16 +65,17 @@ export default function GroceryList() {
           return {
             ...item,
             expiry: item.expirationDate,
-            expiryDays: daysDifference(item.expirationDate) // Increment age
+            expiryDays: daysDifference(item.expirationDate) + 1 // Increment age
           };
         });
 
         const currentItemTexts = currentGroceryItems.map(item => item.text.toLowerCase());
         const filteredItems = updatedItems.filter(
           suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
-        ).slice(0, 4);
-        setExpirationSuggestions(filteredItems)
-        // console.log(daysDifference((result.data[0]["expirationDate"])));
+        );
+        const sortedItems = filteredItems.sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
+
+        setExpirationSuggestions(sortedItems)
     } else {
       console.error('Error loading items:', result.error);
     }
@@ -85,8 +86,6 @@ export default function GroceryList() {
   // }, [items]);
 
   const addItem = (text?: string) => {
-    console.log(items)
-    console.log(suggestions)
     const itemText = text || inputText;
     if (itemText && itemText.trim()) {
       sortItems([...items, { id: Date.now().toString(), text: itemText, completed: false }]);
@@ -182,7 +181,7 @@ export default function GroceryList() {
                       <View style={styles.suggestionContent}>
                         <Text style={styles.suggestionText}>{suggestion.name}</Text>
                         <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
-                          ⏱️ Expires on {suggestion.expiry}
+                          ⏱️ Expires in {suggestion.expiryDays} days
                         </Text>
                       </View>
                       <Text style={styles.suggestionPlus}>+</Text>

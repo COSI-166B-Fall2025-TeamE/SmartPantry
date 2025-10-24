@@ -20,7 +20,7 @@ export const fetchAllData = async (tableName: string) => {
 
     if (error) throw error;
 
-    console.log(`Data fetched from ${tableName}:`, data);
+    console.log(`Data fetched from ${tableName}`);
     return { success: true, data };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
