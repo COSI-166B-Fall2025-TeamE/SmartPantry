@@ -19,17 +19,20 @@ import {
 import { getExpiryColor, getSuggestions } from '@/data/suggestions';
 import Colors from '@/constants/templateColors';
 
+
 type GroceryItem = {
   id: string;
   text: string;
   completed: boolean;
 };
 
+
 type Suggestion = {
   name: string;
   expiry: string;
   expiryDays: number;
 };
+
 
 type ExpiryItem = {
   name: string;
@@ -38,6 +41,7 @@ type ExpiryItem = {
   remainingExpiryDays?: number;
   expirationDate?: string;
 };
+
 
 export default function GroceryList() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -176,13 +180,30 @@ export default function GroceryList() {
                   {expiringItems.map((item, index) => (
                     <TouchableOpacity
                       key={index}
-                      style={styles.expiringChip}
+                      style={[
+                        styles.expiringChip,
+                        { 
+                          backgroundColor: colors.inventoryChip,
+                          borderWidth: colorScheme === 'light' ? 0 : 1,
+                          borderColor: colorScheme === 'dark' ? '#f44336' : 'transparent'
+                        }
+                      ]}
                       onPress={() => addItem(item.name)}
                     >
                         <View style={styles.expiringContent}>
-                          <Text style={styles.expiringText}>{item.name}</Text>
+                          <Text style={[
+                            styles.expiringText,
+                            { color: colorScheme === 'light' ? colors.text : '#f44336' }
+                          ]}>
+                            {item.name}
+                          </Text>
                         </View>
-                        <Text style={styles.expiringPlus}>+</Text>
+                        <Text style={[
+                          styles.expiringPlus,
+                          { color: colorScheme === 'light' ? colors.text : '#f44336' }
+                        ]}>
+                          +
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
@@ -234,6 +255,7 @@ export default function GroceryList() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -364,12 +386,9 @@ const styles = StyleSheet.create({
   expiringChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff5f5',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#f44336',
     marginRight: 8,
     minWidth: 150,
   },
@@ -378,12 +397,10 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   expiringText: {
-    color: '#f44336',
     fontSize: 15,
     fontWeight: '600',
   },
   expiringPlus: {
-    color: '#f44336',
     fontSize: 18,
     fontWeight: 'bold',
   },
