@@ -1,24 +1,16 @@
-import { getExpiringSoonItems, getExpiryColorByDays } from '@/data/expiryCalculator';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-
-
-
 import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-
-
-import { getExpiryColor, getSuggestions } from '@/data/suggestions';
+import { deleteById, fetchAllData, insertData } from './DatabaseFunctions';
 
 type GroceryItem = {
   id: string;
@@ -26,64 +18,86 @@ type GroceryItem = {
   completed: boolean;
 };
 
-type Suggestion = {
-  name: string;
-  expiry: string;
-  expiryDays: number;
+const getExpiryColor = (expiryDays: number) => {
+  if (expiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
+  if (expiryDays <= 5) return '#F44336'; // Red for 3-5 days
+  if (expiryDays <= 7) return '#FF5722'; // Deep orange for 6-7 days
+  if (expiryDays <= 14) return '#FF9800'; // Orange for 1-2 weeks
+  if (expiryDays <= 30) return '#FFC107'; // Amber for 2-4 weeks
+  if (expiryDays <= 90) return '#8BC34A'; // Light green for 1-3 months
+  return '#4CAF50'; // Green for 3+ months
 };
 
-type ExpiryItem = {
-  name: string;
-  expiry: string;
-  expiryDays: number;
-  remainingExpiryDays?: number;
-  expirationDate?: string;
-};
+function daysDifference(dateString: string): number {
+  // Parse the input date string
+  const targetDate = new Date(dateString);
+  
+  // construct date
+  const now = new Date();
+  
+  // Reset time to midnight for both dates to get accurate day difference
+  targetDate.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  
+  // Calculate difference in milliseconds
+  const diffInMs = targetDate.getTime() - now.getTime();
+  
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  // Convert to days
+  const diffInDays = Math.round(diffInMs / (MS_PER_DAY));
+  
+  return diffInDays;
+}
 
 export default function GroceryList() {
-  const [items, setItems] = useState<Array<{ id: string; text: string; completed: boolean }>>([]);
+  const [items, setItems] = useState<Array<GroceryItem>>([]);
   const [inputText, setInputText] = useState('');
-  const [suggestions, setSuggestions] = useState<Array<{ name: string; expiry: string; expiryDays: number }>>([]);
 
-  //const itemsWithExpiry = getActualExpiryItems();
-  const [expiringItems, setExpiringItems] = useState<ExpiryItem[]>([]);
-
+  const [suggestions, setExpirationSuggestions] = useState([]);
+  
+  // Fetch all items on component mount
   useEffect(() => {
-    loadGroceryList();
-  }, []);
-
-
-  useEffect(() => {
-    setSuggestions(getSuggestions(items));
-    saveGroceryList(items);
-    setExpiringItems(getExpiringSoonItems() as { name: string; expiry: string; expiryDays: number }[]);
+    loadItems(items);
   }, [items]);
 
+  useEffect(() => {
+    loadGroceryList()
+  }, [])
+
   const loadGroceryList = async () => {
-    try {
-      const storedItems = await AsyncStorage.getItem('groceryList');
-      if (storedItems) {
-        setItems(JSON.parse(storedItems));
-      }
-    } catch (error) {
-      console.error('Error loading grocery list:', error);
+    const groceryResult = await fetchAllData('groceryList');
+    setItems(groceryResult.data)
+  };
+  
+  const loadItems = async (currentGroceryItems) => {
+    const result = await fetchAllData('expiration');
+    if (result.success){
+        const updatedItems = result.data.map((item) => {
+          return {
+            ...item,
+            expiry: item.expirationDate,
+            expiryDays: daysDifference(item.expirationDate) + 1 // Increment age
+          };
+        });
+
+        const currentItemTexts = currentGroceryItems.map(item => item.text.toLowerCase());
+        const sortedFilteredItems = updatedItems.filter(
+          suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
+        ).sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
+
+        setExpirationSuggestions(sortedFilteredItems)
+    } else {
+      console.error('Error loading items:', result.error);
     }
   };
 
-  const saveGroceryList = async (itemsToSave: GroceryItem[]) => {
-    try {
-      await AsyncStorage.setItem('groceryList', JSON.stringify(itemsToSave));
-    } catch (error) {
-      console.error('Error saving grocery list:', error);
-    }
-  };
-
-
-  const addItem = (text?: string) => {
+  const addItem = async (text?: string) => {
     const itemText = text || inputText;
     if (itemText && itemText.trim()) {
-      setItems([...items, { id: Date.now().toString(), text: itemText, completed: false }]);
+      const newItem = { id: Date.now().toString(), text: itemText, completed: false };
+      sortItems([...items, newItem]);
       setInputText('');
+      await insertData('groceryList', newItem);
     }
   };
 
@@ -91,16 +105,21 @@ export default function GroceryList() {
     const updatedItems = items.map(item =>
       item.id === id ? { ...item, completed: !item.completed } : item
     );
+    sortItems(updatedItems)
+  };
+
+  const sortItems = (allItems) => {
     // Sort so uncompleted items are at the top
-    const sorted = updatedItems.sort((a, b) => {
+    const sorted = allItems.sort((a, b) => {
       if (a.completed === b.completed) return 0;
       return a.completed ? 1 : -1;
     });
     setItems(sorted);
-  };
+  }
 
-  const deleteItem = (id: string) => {
+  const deleteItem = async(id: string) => {
     setItems(items.filter(item => item.id !== id));
+    const result = await deleteById('groceryList', id);
   };
 
   const renderItem = ({ item }: { item: { id: string; text: string; completed: boolean } }) => (
@@ -158,45 +177,7 @@ export default function GroceryList() {
             <Text style={styles.emptyText}>Your grocery list is empty</Text>
           }
           ListHeaderComponent={
-            <>
-            {expiringItems.length > 0 && (
-                <View style={styles.expiringContainer}>
-                  <Text style={styles.expiringTitle}>Current inventory:</Text>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.expiringScrollView}
-                    contentContainerStyle={styles.expiringContentContainer}
-                  >
-                  {expiringItems.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.expiringChip}
-                      onPress={() => addItem(item.name)}
-                    >
-                        <View style={styles.expiringContent}>
-                          <Text style={styles.expiringText}>{item.name}</Text>
-                          <View style={styles.expiringContent}>
-                              {item.remainingExpiryDays !== undefined && (
-                                  <Text style={[
-                                  styles.expiringDays, 
-                                  { color: getExpiryColorByDays(item.remainingExpiryDays) }
-                                ]}>
-                                  {item.remainingExpiryDays > 0 
-                                    ? `${item.remainingExpiryDays} days left` 
-                                    : 'Expired'}
-                                </Text>
-                              )}
-                            </View>
-                        </View>
-                        <Text style={styles.expiringPlus}>+</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-            {suggestions.length > 0 ? (
+            suggestions.length > 0 ? (
               <View style={styles.suggestionsContainer}>
                 <Text style={styles.suggestionsTitle}>Suggestions:</Text>
                 <View style={styles.suggestionsGrid}>
@@ -209,7 +190,7 @@ export default function GroceryList() {
                       <View style={styles.suggestionContent}>
                         <Text style={styles.suggestionText}>{suggestion.name}</Text>
                         <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
-                          ⏱️ Expires in {suggestion.expiry}
+                          ⏱️ Expires in {suggestion.expiryDays} days
                         </Text>
                       </View>
                       <Text style={styles.suggestionPlus}>+</Text>
@@ -217,14 +198,12 @@ export default function GroceryList() {
                   ))}
                 </View>
               </View>
-            ) : null}
-            </>
+            ) : null
           }
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-  
 }
 
 const styles = StyleSheet.create({
@@ -401,60 +380,6 @@ const styles = StyleSheet.create({
   },
   suggestionPlus: {
     color: '#2196F3',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-
-
-  expiringContainer: {
-  backgroundColor: '#fff',
-  padding: 16,
-  marginBottom: 8,
-  borderBottomWidth: 1,
-  borderBottomColor: '#e0e0e0',
-  },
-  expiringTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
-  },
-  expiringScrollView: {
-    flexGrow: 0,
-  },
-  expiringContentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  expiringChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff5f5',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#f44336',
-    marginRight: 8,
-    minWidth: 150,
-  },
-  expiringContent: {
-    flex: 1,
-    marginRight: 8,
-  },
-  expiringText: {
-    color: '#f44336',
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  expiringDays: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 3,
-  },
-  expiringPlus: {
-    color: '#f44336',
     fontSize: 18,
     fontWeight: 'bold',
   },

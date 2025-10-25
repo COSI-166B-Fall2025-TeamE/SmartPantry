@@ -2,7 +2,6 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/templateColors';
 
@@ -54,6 +53,14 @@ export default function TabLayout() {
         options={{
           title: 'Recipes',
           tabBarIcon: ({ color }) => <TabBarIcon name="cutlery" color={color} />,
+        }}
+      />
+
+      <Tabs.Screen
+        name="pantry"
+        options={{
+          title: 'Pantry',
+          tabBarIcon: ({ color }) => <TabBarIcon name="underline" color={color} />,
         }}
       />
     </Tabs>
