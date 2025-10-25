@@ -173,7 +173,7 @@ export default function TabOneScreen() {
           style={[
             styles.scanCard, 
             { 
-              backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED',
+              backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED',
               borderColor: colors.text 
             }
           ]} 
@@ -181,9 +181,9 @@ export default function TabOneScreen() {
         >
           <View style={[
             styles.scanContent, 
-            { backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED' }
+            { backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED' }
           ]}>
-            <View style={{ backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED' }}>
+            <View style={{ backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED' }}>
               <Text style={[styles.scanTitle, { color: colors.text }]}>Scan A Barcode</Text>
               <Text style={[styles.scanSubtitle, { color: colors.text, opacity: 0.7 }]}>
                 Get started with a quick{'\n'}scan of an item near you.
@@ -191,19 +191,19 @@ export default function TabOneScreen() {
             </View>
             <View style={[
               styles.barcodeIcon, 
-              { backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED' }
+              { backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED' }
             ]}>
               <View style={[
                 styles.cornerTL, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
               <View style={[
                 styles.cornerTR, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
@@ -211,14 +211,14 @@ export default function TabOneScreen() {
               <View style={[
                 styles.cornerBL, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
               <View style={[
                 styles.cornerBR, 
                 { 
-                  backgroundColor: colorScheme === 'dark' ? '#FC7E7E' : '#E8F5ED', 
+                  backgroundColor: colorScheme === 'dark' ? '#39bf50' : '#E8F5ED', 
                   borderColor: colors.text 
                 }
               ]} />
@@ -236,20 +236,20 @@ export default function TabOneScreen() {
           style={[
             styles.manualButton, 
             { 
-              backgroundColor: colorScheme === 'dark' ? colors.card : '#FCF9F9',
+              backgroundColor: colorScheme === 'dark' ? '#FFAB91' : '#FCF9F9',
               borderColor: colors.text 
             }
           ]}
         >
           <View style={[
             styles.manualButtonTextContainer, 
-            { backgroundColor: colorScheme === 'dark' ? colors.card : '#FCF9F9' }
+            { backgroundColor: colorScheme === 'dark' ? '#FFAB91' : '#FCF9F9' }
           ]}>
             <Text style={[styles.manualButtonText, { color: colors.text }]}>Enter Items Manually</Text>
           </View>
           <View style={[
             styles.manualButtonIconContainer, 
-            { backgroundColor: colorScheme === 'dark' ? colors.card : '#FCF9F9' }
+            { backgroundColor: colorScheme === 'dark' ? '#FFAB91' : '#FCF9F9' }
           ]}>
             <Ionicons 
               name="finger-print-outline" 
@@ -258,6 +258,7 @@ export default function TabOneScreen() {
             />
           </View>
         </TouchableOpacity>
+
         
         {/* Expiring Soon Section */}
         <View style={styles.expiringSoonHeader}>
@@ -280,7 +281,7 @@ export default function TabOneScreen() {
                 key={item.id} 
                 style={[
                   styles.itemContainer, 
-                  { backgroundColor: colorScheme === 'dark' ? colors.card : '#FFBFBF' }
+                  { backgroundColor: colorScheme === 'dark' ? colors.card : '#ffe3e3' }
                 ]}
               >
                 <View style={[

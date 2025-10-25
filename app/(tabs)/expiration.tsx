@@ -117,7 +117,7 @@ export default function ExpirationTabScreen() {
                 style={[
                   styles.searchInput,
                   { 
-                    backgroundColor: colors.card,
+                    backgroundColor: colors.searchBar,
                     color: colors.text
                   }
                 ]}
@@ -190,16 +190,26 @@ export default function ExpirationTabScreen() {
                   backgroundColor: colors.background,
                   calendarBackground: colors.background,
                   textSectionTitleColor: colors.text,
+                  textSectionTitleDisabledColor: colors.text,
                   selectedDayBackgroundColor: colors.buttonBackground,
                   selectedDayTextColor: colors.buttonText,
                   todayTextColor: colors.buttonBackground,
                   dayTextColor: colors.text,
                   textDisabledColor: colorScheme === 'dark' ? '#4A4E6B' : '#d9e1e8',
+                  disabledArrowColor: colorScheme === 'dark' ? '#4A4E6B' : '#d9e1e8',
                   arrowColor: colors.buttonBackground,
+                  indicatorColor: colors.buttonBackground,
                   monthTextColor: colors.text,
+                  agendaKnobColor: colors.buttonBackground,
                   textDayFontSize: 16,
                   textMonthFontSize: 18,
                   textDayHeaderFontSize: 14,
+                  textDayFontFamily: undefined,
+                  textMonthFontFamily: undefined,
+                  textDayHeaderFontFamily: undefined,
+                  textDayFontWeight: '400',
+                  textMonthFontWeight: 'bold',
+                  textDayHeaderFontWeight: '400',
                 }}
               />
             </View>
