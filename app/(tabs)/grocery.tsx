@@ -13,9 +13,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from 'react-native';
 
 import { getExpiryColor, getSuggestions } from '@/data/suggestions';
+import Colors from '@/constants/templateColors';
 
 type GroceryItem = {
   id: string;
@@ -38,6 +40,9 @@ type ExpiryItem = {
 };
 
 export default function GroceryList() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
+  
   const [items, setItems] = useState<Array<{ id: string; text: string; completed: boolean }>>([]);
   const [inputText, setInputText] = useState('');
   const [suggestions, setSuggestions] = useState<Array<{ name: string; expiry: string; expiryDays: number }>>([]);
@@ -98,7 +103,7 @@ export default function GroceryList() {
   };
 
   const renderItem = ({ item }: { item: { id: string; text: string; completed: boolean } }) => (
-    <View style={styles.itemContainer}>
+    <View style={[styles.itemContainer, { backgroundColor: colors.card }]}>
       <TouchableOpacity
         style={styles.itemContent}
         onPress={() => toggleItem(item.id)}
@@ -106,7 +111,7 @@ export default function GroceryList() {
         <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
           {item.completed && <Text style={styles.checkmark}>✓</Text>}
         </View>
-        <Text style={[styles.itemText, item.completed && styles.itemTextCompleted]}>
+        <Text style={[styles.itemText, { color: colors.text }, item.completed && styles.itemTextCompleted]}>
           {item.text}
         </Text>
       </TouchableOpacity>
@@ -117,30 +122,30 @@ export default function GroceryList() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Grocery List</Text>
-          <Text style={styles.subtitle}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
+          <Text style={[styles.title, { color: colors.text }]}>Grocery List</Text>
+          <Text style={[styles.subtitle, { color: colors.text }]}>
             {items.filter(i => !i.completed).length} items to buy
           </Text>
         </View>
 
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { backgroundColor: colors.background }]}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.searchBar, color: colors.text }]}
             placeholder="Add grocery item..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
             value={inputText}
             onChangeText={setInputText}
             onSubmitEditing={() => addItem()}
             returnKeyType="done"
           />
-          <TouchableOpacity style={styles.addButton} onPress={() => addItem()}>
-            <Text style={styles.addButtonText}>+</Text>
+          <TouchableOpacity style={[styles.addButton, { backgroundColor: colors.buttonBackground }]} onPress={() => addItem()}>
+            <Text style={[styles.addButtonText, { color: colors.buttonText }]}>+</Text>
           </TouchableOpacity>
         </View>
 
@@ -151,13 +156,13 @@ export default function GroceryList() {
           style={styles.list}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Your grocery list is empty</Text>
+            <Text style={[styles.emptyText, { color: colors.text }]}>Your grocery list is empty</Text>
           }
           ListHeaderComponent={
             <>
             {expiringItems.length > 0 && (
-                <View style={styles.expiringContainer}>
-                  <Text style={styles.sectionTitle}>Current inventory:</Text>
+                <View style={[styles.expiringContainer, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Current inventory:</Text>
                   <ScrollView 
                     horizontal 
                     showsHorizontalScrollIndicator={false}
@@ -181,24 +186,42 @@ export default function GroceryList() {
               )}
 
             {suggestions.length > 0 ? (
-              <View style={styles.suggestionsContainer}>
-                <Text style={styles.sectionTitle}>Suggestions:</Text>
+              <View style={[styles.suggestionsContainer, { backgroundColor: colors.background }]}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Suggestions:</Text>
                 <View style={styles.suggestionsGrid}>
                   {suggestions.map((suggestion, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.suggestionChip}
-                      onPress={() => addItem(suggestion.name)}
-                    >
-                      <View style={styles.suggestionContent}>
-                        <Text style={styles.suggestionText}>{suggestion.name}</Text>
-                        <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
-                          ⏱️ Expires in {suggestion.expiry}
-                        </Text>
-                      </View>
-                      <Text style={styles.suggestionPlus}>+</Text>
-                    </TouchableOpacity>
-                  ))}
+  <TouchableOpacity
+    key={index}
+    style={[
+      styles.suggestionChip,
+      { 
+        backgroundColor: colorScheme === 'light' ? '#F5F5F5' : '#6B7B9E',
+        borderColor: colorScheme === 'light' ? '#371B34' : '#fff'
+      }
+    ]}
+    onPress={() => addItem(suggestion.name)}
+  >
+    <View style={styles.suggestionContent}>
+      <Text style={[
+        styles.suggestionText,
+        { color: colorScheme === 'light' ? '#371B34' : '#fff' }
+      ]}>
+        {suggestion.name}
+      </Text>
+      <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
+        ⏱️ Expires in {suggestion.expiry}
+      </Text>
+    </View>
+    <Text style={[
+      styles.suggestionPlus,
+      { color: colorScheme === 'light' ? '#371B34' : '#fff' }
+    ]}>
+      +
+    </Text>
+  </TouchableOpacity>
+))}
+
+
                 </View>
               </View>
             ) : null}
@@ -213,7 +236,6 @@ export default function GroceryList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   keyboardView: {
     flex: 1,
@@ -222,23 +244,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 10,
     paddingBottom: 10,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
     marginBottom: 5,
   },
   subtitle: {
     fontSize: 14,
-    color: '#000',
     opacity: 0.6,
   },
   inputContainer: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#fff',
   },
   input: {
     flex: 1,
@@ -246,21 +264,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 15,
     fontSize: 16,
-    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     borderWidth: 0,
-    color: '#000',
   },
   addButton: {
     width: 50,
     height: 50,
-    backgroundColor: '#371B34',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   addButtonText: {
-    color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -274,7 +288,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
     textAlign: 'center',
     marginTop: 40,
     opacity: 0.6,
@@ -282,7 +295,6 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8EAF6',
     padding: 16,
     marginBottom: 12,
     borderRadius: 12,
@@ -313,7 +325,6 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 18,
-    color: '#000',
     flex: 1,
     fontWeight: 'bold',
   },
@@ -336,12 +347,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
     opacity: 0.7,
     marginBottom: 12,
   },
   expiringContainer: {
-    backgroundColor: '#fff',
     paddingVertical: 16,
     marginBottom: 8,
   },
@@ -379,7 +388,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   suggestionsContainer: {
-    backgroundColor: '#fff',
     paddingVertical: 16,
     marginBottom: 8,
   },
@@ -389,23 +397,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestionChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f7ff',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#2196F3',
-    marginBottom: 8,
-    minWidth: '48%',
-  },
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 10,
+  paddingHorizontal: 14,
+  borderRadius: 12,
+  borderWidth: 1,
+  marginBottom: 8,
+  minWidth: '48%',
+},
   suggestionContent: {
     flex: 1,
     marginRight: 8,
   },
   suggestionText: {
-    color: '#2196F3',
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 2,
@@ -416,7 +421,6 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   suggestionPlus: {
-    color: '#2196F3',
     fontSize: 18,
     fontWeight: 'bold',
   },

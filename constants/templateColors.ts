@@ -16,6 +16,9 @@ export default {
     buttonText: '#fff',
     secondaryButton: '#f0f0f0',
     secondaryButtonText: '#666',
+    expiringCard: '#fdead8ff', // Light mode expiring soon card
+    scanCard: '#E8F5ED',
+    manualCard: '#FCF9F9',
   },
   dark: {
     text: '#fff',
@@ -31,5 +34,8 @@ export default {
     buttonText: '#371B34',
     secondaryButton: '#4A4E6B',
     secondaryButtonText: '#fff',
+    expiringCard: '#6D6875', // Dark mode expiring soon card - your requested color
+    scanCard: '#B0C4B1',
+    manualCard: '#F7E1D7',
   },
 };

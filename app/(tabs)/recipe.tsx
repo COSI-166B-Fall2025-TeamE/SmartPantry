@@ -326,7 +326,7 @@ export default function RecipeTabScreen() {
                           
                           <RNView style={[
                             styles.categoryBadge,
-                            { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : 'rgba(0, 122, 255, 0.1)' }
+                            { backgroundColor: colorScheme === 'dark' ? '#146ef5' : 'rgba(0, 122, 255, 0.1)' }
                           ]}>
                             <Text style={[
                               styles.categoryBadgeText,

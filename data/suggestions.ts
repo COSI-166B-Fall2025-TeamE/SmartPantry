@@ -42,7 +42,7 @@ export const getExpiryColor = (expiryDays: number) => {
   if (expiryDays <= 5) return '#F44336'; // Red for 3-5 days
   if (expiryDays <= 7) return '#FF5722'; // Deep orange for 6-7 days
   if (expiryDays <= 14) return '#FF9800'; // Orange for 1-2 weeks
-  if (expiryDays <= 30) return '#FFC107'; // Amber for 2-4 weeks
+  if (expiryDays <= 30) return '#E6A500'; // Darker amber for 2-4 weeks (changed from #FFC107)
   if (expiryDays <= 90) return '#8BC34A'; // Light green for 1-3 months
   return '#4CAF50'; // Green for 3+ months
 };
