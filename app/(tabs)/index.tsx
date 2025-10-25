@@ -254,7 +254,7 @@ export default function TabOneScreen() {
             <Ionicons 
               name="finger-print-outline" 
               size={28} 
-              color={colorScheme === 'dark' ? colors.text : '#666'} 
+              color={colors.text}
             />
           </View>
         </TouchableOpacity>

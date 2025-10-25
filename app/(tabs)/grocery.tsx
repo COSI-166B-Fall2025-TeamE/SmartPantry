@@ -108,8 +108,12 @@ export default function GroceryList() {
         style={styles.itemContent}
         onPress={() => toggleItem(item.id)}
       >
-        <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
-          {item.completed && <Text style={styles.checkmark}>✓</Text>}
+        <View style={[
+          styles.checkbox, 
+          { borderColor: colorScheme === 'dark' ? colors.buttonBackground : '#371B34' },
+          item.completed && { backgroundColor: colorScheme === 'dark' ? colors.buttonBackground : '#371B34' }
+        ]}>
+          {item.completed && <Text style={[styles.checkmark, { color: colorScheme === 'dark' ? colors.buttonText : '#fff' }]}>✓</Text>}
         </View>
         <Text style={[styles.itemText, { color: colors.text }, item.completed && styles.itemTextCompleted]}>
           {item.text}
@@ -190,38 +194,36 @@ export default function GroceryList() {
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>Suggestions:</Text>
                 <View style={styles.suggestionsGrid}>
                   {suggestions.map((suggestion, index) => (
-  <TouchableOpacity
-    key={index}
-    style={[
-      styles.suggestionChip,
-      { 
-        backgroundColor: colorScheme === 'light' ? '#F5F5F5' : '#6B7B9E',
-        borderColor: colorScheme === 'light' ? '#371B34' : '#fff'
-      }
-    ]}
-    onPress={() => addItem(suggestion.name)}
-  >
-    <View style={styles.suggestionContent}>
-      <Text style={[
-        styles.suggestionText,
-        { color: colorScheme === 'light' ? '#371B34' : '#fff' }
-      ]}>
-        {suggestion.name}
-      </Text>
-      <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
-        ⏱️ Expires in {suggestion.expiry}
-      </Text>
-    </View>
-    <Text style={[
-      styles.suggestionPlus,
-      { color: colorScheme === 'light' ? '#371B34' : '#fff' }
-    ]}>
-      +
-    </Text>
-  </TouchableOpacity>
-))}
-
-
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.suggestionChip,
+                        { 
+                          backgroundColor: colorScheme === 'light' ? '#F5F5F5' : colors.card,
+                          borderColor: colorScheme === 'light' ? '#371B34' : colors.border
+                        }
+                      ]}
+                      onPress={() => addItem(suggestion.name)}
+                    >
+                      <View style={styles.suggestionContent}>
+                        <Text style={[
+                          styles.suggestionText,
+                          { color: colors.text }
+                        ]}>
+                          {suggestion.name}
+                        </Text>
+                        <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
+                          ⏱️ Expires in {suggestion.expiry}
+                        </Text>
+                      </View>
+                      <Text style={[
+                        styles.suggestionPlus,
+                        { color: colors.text }
+                      ]}>
+                        +
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
             ) : null}
@@ -308,7 +310,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: '#371B34',
     borderRadius: 6,
     marginRight: 12,
     justifyContent: 'center',
@@ -319,7 +320,6 @@ const styles = StyleSheet.create({
     borderColor: '#371B34',
   },
   checkmark: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -397,15 +397,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestionChip: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingVertical: 10,
-  paddingHorizontal: 14,
-  borderRadius: 12,
-  borderWidth: 1,
-  marginBottom: 8,
-  minWidth: '48%',
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+    minWidth: '48%',
+  },
   suggestionContent: {
     flex: 1,
     marginRight: 8,

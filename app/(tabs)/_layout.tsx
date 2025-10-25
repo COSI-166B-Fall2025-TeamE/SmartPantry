@@ -29,7 +29,7 @@ function MaterialIcon(props: {
 // Custom elevated home button with scale animation
 function HomeTabButton({ color, focused }: { color: string; focused: boolean }) {
   const scaleAnim = React.useRef(new Animated.Value(focused ? 1 : 0.85)).current;
-  const buttonColor = focused ? '#FC7E7E' : '#FFBFBF';
+  const buttonColor = focused ? '#E17A89' : '#ECACB6';
   
   React.useEffect(() => {
     Animated.timing(scaleAnim, {
