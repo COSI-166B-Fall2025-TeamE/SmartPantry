@@ -81,6 +81,36 @@ export const deleteById = async (tableName: string, id: string) => {
   }
 };
 
+
+// ==================== UPDATE DATA ====================
+
+/**
+ * Update data by ID
+ * @param tableName - Name of the table to update
+ * @param id - ID of the row to update
+ * @param updateData - Object with fields to update
+ * @returns Object with success status and updated data or error
+ */
+export const updateById = async (tableName: string, id: string, updateData: any) => {
+  try {
+    const { data, error } = await supabase
+      .from(tableName)
+      .update(updateData)
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+
+    console.log(`Data updated in ${tableName}:`, data);
+    return { success: true, data };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+    console.error(`Error updating data in ${tableName}:`, err);
+    return { success: false, error: errorMessage };
+  }
+};
+
+
 // ==================== EXAMPLE USAGE FROM ANOTHER FILE ====================
 
 /*

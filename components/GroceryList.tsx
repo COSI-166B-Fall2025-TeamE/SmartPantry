@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { deleteById, fetchAllData, insertData } from './DatabaseFunctions';
+import { deleteById, fetchAllData, insertData, updateById } from './DatabaseFunctions';
 
 type GroceryItem = {
   id: string;
@@ -101,10 +101,15 @@ export default function GroceryList() {
     }
   };
 
-  const toggleItem = (id: string) => {
+
+  const toggleItem = async (id: string) => {
     const updatedItems = items.map(item =>
       item.id === id ? { ...item, completed: !item.completed } : item
     );
+
+    const foundItem = items.find(item => item.id === id);
+    await updateById('groceryList', id, {completed: !foundItem.completed});
+
     sortItems(updatedItems)
   };
 
