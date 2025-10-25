@@ -2,8 +2,6 @@ import { getExpiringSoonItems } from '@/data/expiryCalculator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 
-import GroceryList from '@/components/GroceryList';
-import { View } from '@/components/Themed';
 import {
   FlatList,
   KeyboardAvoidingView,

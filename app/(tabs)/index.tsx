@@ -5,14 +5,12 @@ import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
-import { Link, router } from 'expo-router'; // <-- CHANGED (Imported router)
-import { useEffect, useState } from 'react'; //
+import { Link, router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-
 
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import EditScreenInfo from '@/components/EditScreenInfo';
-// import { expirationItems } from '@/data/ItemsList';
 
 
 interface Item  {
@@ -28,16 +26,6 @@ export default function TabOneScreen() {
 
   const [permission, requestPermission] = useCameraPermissions();
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-
-  //const [items] = useState<FoodItem[]>([
-  //{ id: '1', name: 'Bananas', expirationDate: '09/30/2025' },
-  //{ id: '2', name: 'Milk', expirationDate: '10/08/2025' },
-  //{ id: '3', name: 'Bread', expirationDate: '10/10/2025' },
-  //]);
-
-  // const [items, setItems] = useState<Item[]>([]);
-
-
   const [expirationItems, setItems] = useState([]);
 
   // Fetch all items on component mount
@@ -143,30 +131,6 @@ export default function TabOneScreen() {
                 
                 <Link href="/grocery" asChild>
                   <TouchableOpacity 
-                      style={styles.sidebarItem}
-                      onPress={() => setIsSidebarVisible(false)}
-                    >
-                    <Text style={styles.sidebarItemText}>Grocery List</Text>
-                  </TouchableOpacity>
-                  </Link>
-                  
-                  <TouchableOpacity 
-                    style={styles.sidebarItem}
-                    onPress={async () => {
-                      try {
-                        const storedItems = await fetchAllData('groceryList');
-                        if (storedItems.data) {
-                          const items = storedItems.data;
-                          const itemsList = items.map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`).join('\n');
-                          alert(`Grocery List:\n\n${itemsList || 'No items'}`);
-                        } else {
-                          alert('Grocery list is empty');
-                        }
-                      } catch (error) {
-                        alert('Failed to load grocery list');
-                      }
-                      setIsSidebarVisible(false);
-                    }}
                     style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
                     onPress={() => setIsSidebarVisible(false)}
                   >
@@ -178,9 +142,9 @@ export default function TabOneScreen() {
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
                   onPress={async () => {
                     try {
-                      const storedItems = await AsyncStorage.getItem('groceryList');
-                      if (storedItems) {
-                        const items = JSON.parse(storedItems);
+                      const storedItems = await fetchAllData('groceryList');
+                      if (storedItems.data) {
+                        const items = storedItems.data;
                         const itemsList = items.map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`).join('\n');
                         alert(`Grocery List:\n\n${itemsList || 'No items'}`);
                       } else {
