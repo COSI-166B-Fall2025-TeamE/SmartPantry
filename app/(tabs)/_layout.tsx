@@ -2,7 +2,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -26,16 +26,32 @@ function MaterialIcon(props: {
   return <MaterialCommunityIcons size={props.size || 24} style={{ marginBottom: -3 }} {...props} />;
 }
 
-// Custom elevated home button
+// Custom elevated home button with scale animation
 function HomeTabButton({ color, focused }: { color: string; focused: boolean }) {
+  const scaleAnim = React.useRef(new Animated.Value(focused ? 1 : 0.85)).current;
   const buttonColor = focused ? '#FC7E7E' : '#FFBFBF';
-  const topPosition = focused ? -15 : -8;
   
+  React.useEffect(() => {
+    Animated.timing(scaleAnim, {
+      toValue: focused ? 1 : 0.85,
+      duration: 2000,
+      useNativeDriver: true,
+    }).start();
+  }, [focused]);
+
   return (
-    <View style={[styles.homeButtonContainer, { top: topPosition }]}>
-      <View style={[styles.homeButton, { backgroundColor: buttonColor }]}>
+    <View style={styles.homeButtonContainer}>
+      <Animated.View 
+        style={[
+          styles.homeButton, 
+          { 
+            backgroundColor: buttonColor,
+            transform: [{ scale: scaleAnim }]
+          }
+        ]}
+      >
         <FontAwesome name="home" color="#fff" size={28} />
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -104,6 +120,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    top: -8,
   },
   homeButton: {
     width: 60,
