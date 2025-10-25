@@ -184,8 +184,8 @@ export default function GroceryList() {
                         styles.expiringChip,
                         { 
                           backgroundColor: colors.inventoryChip,
-                          borderWidth: colorScheme === 'light' ? 0 : 1,
-                          borderColor: colorScheme === 'dark' ? '#f44336' : 'transparent'
+                          borderWidth: 0,
+                          borderColor: 'transparent'
                         }
                       ]}
                       onPress={() => addItem(item.name)}

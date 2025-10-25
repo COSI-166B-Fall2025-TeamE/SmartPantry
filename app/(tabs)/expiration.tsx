@@ -96,12 +96,12 @@ export default function ExpirationTabScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <TouchableOpacity 
-          activeOpacity={1} 
-          style={[styles.flexContainer, { backgroundColor: colors.background }]} 
-          onPress={handleScreenPress}
-        >
-          <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <View style={[styles.flexContainer, { backgroundColor: colors.background }]}>
+          <TouchableOpacity 
+            activeOpacity={1} 
+            style={[styles.header, { backgroundColor: colors.background }]}
+            onPress={handleScreenPress}
+          >
             <Text style={[styles.title, { color: colors.text }]}>Expiration Tracker</Text>
             <TouchableOpacity 
               style={styles.searchIcon} 
@@ -116,7 +116,7 @@ export default function ExpirationTabScreen() {
                 color={colorScheme === 'dark' ? '#8E8E93' : '#666'} 
               />
             </TouchableOpacity>      
-          </View>
+          </TouchableOpacity>
 
 
           <Text style={[styles.subtitle, { color: colors.text }]}>Track your food expiration dates</Text>
@@ -140,7 +140,7 @@ export default function ExpirationTabScreen() {
               />
               {searchResults.length > 0 && (
                 <View style={[styles.searchResults, { backgroundColor: colors.card }]}>
-                  <ScrollView>
+                  <ScrollView nestedScrollEnabled={true}>
                     {searchResults.map(item => (
                       <TouchableOpacity 
                         key={item.id} 
@@ -185,7 +185,11 @@ export default function ExpirationTabScreen() {
           </View>
 
 
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.scrollView} 
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+          >
             {/* Calendar Section */}
             <View style={[styles.calendarContainer, { backgroundColor: colors.background }]}>
               <Calendar
@@ -250,6 +254,7 @@ export default function ExpirationTabScreen() {
                 showsHorizontalScrollIndicator={false}
                 style={styles.allItemsList}
                 contentContainerStyle={styles.allItemsContentContainer}
+                nestedScrollEnabled={true}
               >
                 {expirationItems
                   .sort((a, b) => a.expirationDate.localeCompare(b.expirationDate))
@@ -268,7 +273,7 @@ export default function ExpirationTabScreen() {
               </ScrollView>
             </View>
           </ScrollView>
-        </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
