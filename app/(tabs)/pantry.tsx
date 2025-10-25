@@ -362,7 +362,7 @@ const MyPantryScreen = () => {
           style={[
             styles.viewToggleButton, 
             { 
-              backgroundColor: colorScheme === 'light' ? colors.buttonBackground : colors.card 
+              backgroundColor: colors.buttonBackground
             }
           ]}
           onPress={() => setIsGridView(!isGridView)}
@@ -370,7 +370,7 @@ const MyPantryScreen = () => {
           <Ionicons 
             name={isGridView ? 'list' : 'grid'} 
             size={24} 
-            color={colorScheme === 'light' ? colors.buttonText : colors.text}
+            color={colors.buttonText}
           />
         </TouchableOpacity>
       </View>
