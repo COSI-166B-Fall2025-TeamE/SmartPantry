@@ -76,7 +76,7 @@ export default function TabOneScreen() {
           <Ionicons 
             name="person" 
             size={24} 
-            color={colorScheme === 'dark' ? colors.text : '#4A4A4A'} 
+            color={colors.text}
           />
         </TouchableOpacity>
       </View>
