@@ -1,6 +1,7 @@
 const tintColorLight = '#2f95dc';
 const tintColorDark = '#fff';
 
+
 export default {
   light: {
     text: '#000',
@@ -9,6 +10,8 @@ export default {
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorLight,
     card: '#E8EAF6',
+    todayCard: '#D3E5C5',
+    profileButton: '#F2C7C7',
     border: '#e0e0e0',
     inputBackground: '#fff',
     searchBar: 'rgba(128, 128, 128, 0.1)',
@@ -16,7 +19,8 @@ export default {
     buttonText: '#fff',
     secondaryButton: '#f0f0f0',
     secondaryButtonText: '#666',
-    expiringCard: '#E8EAF6', // Light mode expiring soon card
+    expiringCard: '#E8EAF6',
+    selectedDateCard: '#F2C7C7',
     scanCard: '#AFE9B2',
     manualCard: '#FCF9F9',
   },
@@ -27,6 +31,8 @@ export default {
     tabIconDefault: '#ccc',
     tabIconSelected: tintColorDark,
     card: '#3E4055',
+    todayCard: '#3E4055',
+    profileButton: '#3E4055',
     border: '#4A4E6B',
     inputBackground: '#2F3142',
     searchBar: 'rgba(128, 128, 128, 0.1)',
@@ -34,8 +40,9 @@ export default {
     buttonText: '#371B34',
     secondaryButton: '#4A4E6B',
     secondaryButtonText: '#fff',
-    expiringCard: '#3E4055', // Dark mode expiring soon card - your requested color
+    expiringCard: '#3E4055',
+    selectedDateCard: '#3E4055',
     scanCard: '#6AB46D',
-    manualCard: '#E99B00',
+    manualCard: '#ECACB6',
   },
 };

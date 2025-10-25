@@ -12,11 +12,13 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import EditScreenInfo from '@/components/EditScreenInfo';
 import { expirationItems } from '@/data/ItemsList';
 
+
 interface Item  {
   id: string;
   name: string;
   expirationDate: string;
 }
+
 
 export default function TabOneScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -67,7 +69,7 @@ export default function TabOneScreen() {
         <TouchableOpacity style={[
           styles.profileButton,
           { 
-            backgroundColor: colors.card,
+            backgroundColor: colors.profileButton,
             borderColor: colors.text
           }
         ]}>
@@ -307,6 +309,7 @@ export default function TabOneScreen() {
     </SafeAreaProvider>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

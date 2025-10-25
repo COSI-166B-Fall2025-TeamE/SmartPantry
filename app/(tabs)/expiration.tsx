@@ -8,11 +8,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
 import Colors from '@/constants/templateColors';
 
+
 interface ExpirationItem {
   id: string;
   name: string;
   expirationDate: string;
 }
+
 
 export default function ExpirationTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -23,6 +25,7 @@ export default function ExpirationTabScreen() {
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<ExpirationItem[]>([]);
+
 
   const today = new Date().toISOString().split('T')[0];
   const itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
@@ -42,8 +45,10 @@ export default function ExpirationTabScreen() {
       }
     });
 
+
     setMarkedDates(newMarkedDates);
   }, []);
+
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -56,10 +61,12 @@ export default function ExpirationTabScreen() {
     }
   }, [searchQuery]); 
 
+
   const handleDayPress = (day: any) => {
     console.log('Selected day:', day.dateString);
     setSelectedDate(day.dateString);
   };
+
 
   const handleItemPress = (item: ExpirationItem) => {
     Alert.alert(
@@ -69,6 +76,7 @@ export default function ExpirationTabScreen() {
     );
   };
 
+
   const handleScreenPress = () => {
     if (showSearch) {
       setShowSearch(false);
@@ -76,6 +84,7 @@ export default function ExpirationTabScreen() {
       Keyboard.dismiss();
     }
   };
+
 
   return (
     <SafeAreaView 
@@ -109,7 +118,9 @@ export default function ExpirationTabScreen() {
             </TouchableOpacity>      
           </View>
 
+
           <Text style={[styles.subtitle, { color: colors.text }]}>Track your food expiration dates</Text>
+
 
           {showSearch && (
             <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
@@ -153,7 +164,8 @@ export default function ExpirationTabScreen() {
             </View>
           )}
 
-          <View style={[styles.todayContainer, { backgroundColor: colors.card }]}>
+
+          <View style={[styles.todayContainer, { backgroundColor: colors.todayCard }]}>
             <Text style={[styles.todayInfo, { color: colors.buttonBackground }]}>
               {itemsExpiringToday.length > 0 
                 ? <>
@@ -171,6 +183,7 @@ export default function ExpirationTabScreen() {
               *Dots indicate items expiring on that date
             </Text>
           </View>
+
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             {/* Calendar Section */}
@@ -213,6 +226,7 @@ export default function ExpirationTabScreen() {
                 }}
               />
             </View>
+
 
             {/* Items expiring on selected date */}
             <View style={[styles.itemsContainer, { backgroundColor: colors.background }]}>
@@ -259,6 +273,7 @@ export default function ExpirationTabScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
