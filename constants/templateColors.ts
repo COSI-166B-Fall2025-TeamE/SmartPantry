@@ -43,7 +43,7 @@ export default {
     secondaryButton: '#4A4E6B',
     secondaryButtonText: '#fff',
     expiringCard: '#3E4055',
-    selectedDateCard: '#3E4055',
+    selectedDateCard: '#CDD0E3',
     scanCard: '#6AB46D',
     manualCard: '#ECACB6',
   },

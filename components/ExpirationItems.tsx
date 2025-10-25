@@ -41,8 +41,21 @@ const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemP
               ]}
               onPress={() => onItemPress(item)}
             >
-              <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
-              <Text style={[styles.itemDate, { color: colors.text, opacity: 0.7 }]}>{item.expirationDate}</Text>
+              <Text style={[
+                styles.itemName, 
+                { color: colorScheme === 'dark' ? colors.buttonText : colors.text }
+              ]}>
+                {item.name}
+              </Text>
+              <Text style={[
+                styles.itemDate, 
+                { 
+                  color: colorScheme === 'dark' ? colors.buttonText : colors.text,
+                  opacity: 0.7 
+                }
+              ]}>
+                {item.expirationDate}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>

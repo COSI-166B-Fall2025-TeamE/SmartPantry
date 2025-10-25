@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 
+
 interface Recipe {
   idMeal: string;
   strMeal: string;
@@ -26,6 +27,7 @@ interface Recipe {
   dateModified: string | null;
 }
 
+
 export default function RecipeDetailScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
@@ -36,11 +38,13 @@ export default function RecipeDetailScreen() {
   const [isSourceValid, setIsSourceValid] = useState(false);
   const [checkingLinks, setCheckingLinks] = useState(false);
 
+
   useEffect(() => {
     if (id) {
       fetchRecipeDetails();
     }
   }, [id]);
+
 
   // Validate URLs when recipe is loaded
   useEffect(() => {
@@ -48,6 +52,7 @@ export default function RecipeDetailScreen() {
       validateLinks();
     }
   }, [recipe]);
+
 
   const validateLinks = async () => {
     setCheckingLinks(true);
@@ -67,11 +72,13 @@ export default function RecipeDetailScreen() {
     setCheckingLinks(false);
   };
 
+
   const checkUrlValidity = async (url: string): Promise<boolean> => {
     // First, validate URL format
     if (!isValidUrlFormat(url)) {
       return false;
     }
+
 
     // Check if URL can be opened (this works for deep links and external URLs)
     try {
@@ -84,16 +91,19 @@ export default function RecipeDetailScreen() {
       return false;
     }
 
+
     // For http/https URLs, attempt a HEAD request to verify the link works
     if (url.startsWith('http://') || url.startsWith('https://')) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
+
         const response = await fetch(url, {
           method: 'HEAD',
           signal: controller.signal,
         });
+
 
         clearTimeout(timeoutId);
         return response.ok; // Returns true if status is 200-299
@@ -106,8 +116,10 @@ export default function RecipeDetailScreen() {
       }
     }
 
+
     return true;
   };
+
 
   const isValidUrlFormat = (string: string): boolean => {
     try {
@@ -117,6 +129,7 @@ export default function RecipeDetailScreen() {
       return false;
     }
   };
+
 
   const fetchRecipeDetails = async () => {
     setLoading(true);
@@ -135,6 +148,7 @@ export default function RecipeDetailScreen() {
     }
   };
 
+
   const formatRecipe = (meal: any): Recipe => {
     const ingredients = [];
     for (let i = 1; i <= 20; i++) {
@@ -148,6 +162,7 @@ export default function RecipeDetailScreen() {
         });
       }
     }
+
 
     return {
       idMeal: meal.idMeal,
@@ -167,11 +182,13 @@ export default function RecipeDetailScreen() {
     };
   };
 
+
   const openYouTube = () => {
     if (recipe?.strYoutube && isYoutubeValid) {
       Linking.openURL(recipe.strYoutube);
     }
   };
+
 
   const openSource = () => {
     if (recipe?.strSource && isSourceValid) {
@@ -179,10 +196,12 @@ export default function RecipeDetailScreen() {
     }
   };
 
+
   const getTags = (strTags: string | null): string[] => {
     if (!strTags) return [];
     return strTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
   };
+
 
   if (loading) {
     return (
@@ -203,6 +222,7 @@ export default function RecipeDetailScreen() {
       </>
     );
   }
+
 
   if (!recipe) {
     return (
@@ -226,7 +246,9 @@ export default function RecipeDetailScreen() {
     );
   }
 
+
   const tags = getTags(recipe.strTags);
+
 
   return (
     <>
@@ -248,6 +270,7 @@ export default function RecipeDetailScreen() {
             <View style={styles.placeholder} />
           </View>
 
+
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             {/* Recipe Image */}
             <Image 
@@ -256,9 +279,11 @@ export default function RecipeDetailScreen() {
               resizeMode="cover"
             />
 
+
             {/* Recipe Info */}
             <View style={styles.contentContainer}>
               <Text style={styles.recipeName}>{recipe.strMeal}</Text>
+
 
               {/* Category and Area */}
               <RNView style={styles.metaContainer}>
@@ -273,6 +298,7 @@ export default function RecipeDetailScreen() {
                 </RNView>
               </RNView>
 
+
               {/* Tags */}
               {tags.length > 0 && (
                 <RNView style={styles.tagsContainer}>
@@ -284,22 +310,25 @@ export default function RecipeDetailScreen() {
                 </RNView>
               )}
 
+
               {/* Action Buttons */}
               <RNView style={styles.actionButtons}>
                 {recipe.strYoutube && (
                   <TouchableOpacity 
                     style={[
                       styles.actionButton,
+                      colorScheme === 'dark' && styles.actionButtonDark,
                       (!isYoutubeValid || checkingLinks) && styles.actionButtonDisabled
                     ]} 
                     onPress={openYouTube}
                     disabled={!isYoutubeValid || checkingLinks}
                   >
                     {checkingLinks ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={colorScheme === 'dark' ? '#371B34' : '#fff'} />
                     ) : (
                       <Text style={[
                         styles.actionButtonText,
+                        colorScheme === 'dark' && styles.actionButtonTextDark,
                         (!isYoutubeValid || checkingLinks) && styles.actionButtonTextDisabled
                       ]}>
                         📹 Watch Video {!isYoutubeValid && '(Unavailable)'}
@@ -312,6 +341,7 @@ export default function RecipeDetailScreen() {
                     style={[
                       styles.actionButton, 
                       styles.actionButtonSecondary,
+                      colorScheme === 'dark' && styles.actionButtonSecondaryDark,
                       (!isSourceValid || checkingLinks) && styles.actionButtonSecondaryDisabled
                     ]} 
                     onPress={openSource}
@@ -322,6 +352,7 @@ export default function RecipeDetailScreen() {
                     ) : (
                       <Text style={[
                         styles.actionButtonTextSecondary,
+                        colorScheme === 'dark' && styles.actionButtonTextDark,
                         (!isSourceValid || checkingLinks) && styles.actionButtonTextDisabled
                       ]}>
                         🔗 Source {!isSourceValid && '(Unavailable)'}
@@ -330,6 +361,7 @@ export default function RecipeDetailScreen() {
                   </TouchableOpacity>
                 )}
               </RNView>
+
 
               {/* Ingredients Section */}
               <View style={styles.section}>
@@ -346,6 +378,7 @@ export default function RecipeDetailScreen() {
                 </View>
               </View>
 
+
               {/* Instructions Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Instructions</Text>
@@ -358,6 +391,7 @@ export default function RecipeDetailScreen() {
     </>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -485,6 +519,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  actionButtonDark: {
+    backgroundColor: '#CDD0E3',
+  },
   actionButtonDisabled: {
     backgroundColor: '#CDD0E3',
     opacity: 0.5,
@@ -494,6 +531,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#371B34',
   },
+  actionButtonSecondaryDark: {
+    backgroundColor: '#CDD0E3',
+    borderWidth: 0,
+  },
   actionButtonSecondaryDisabled: {
     borderColor: '#CDD0E3',
     opacity: 0.5,
@@ -502,6 +543,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  actionButtonTextDark: {
+    color: '#371B34',
   },
   actionButtonTextSecondary: {
     color: '#371B34',
