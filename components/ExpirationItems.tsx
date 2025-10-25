@@ -1,7 +1,10 @@
 import { Text, View } from '@/components/Themed';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
 import { fetchAllData } from './DatabaseFunctions';
+import { expirationItems } from '@/data/ItemsList';
+import { StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import Colors from '@/constants/templateColors';
+
 
 interface ExpirationItem {
   id: string;
@@ -9,11 +12,13 @@ interface ExpirationItem {
   expirationDate: string;
 }
 
+
 interface ExpirationItemsProps {
   selectedDate: string;
   onItemPress: (item: ExpirationItem) => void;
   items?: ExpirationItem[];
 }
+
 
 const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemPress }) => {
   
@@ -29,10 +34,13 @@ const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemP
     setItems(result.data);
   };
   
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
   
   const filteredItems = selectedDate 
     ? expirationItems.filter(item => item.expirationDate === selectedDate)
     : [];
+
 
   return (
     <View style={styles.itemsSection}>
@@ -41,22 +49,39 @@ const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemP
           {filteredItems.map((item) => (
             <TouchableOpacity 
               key={item.id} 
-              style={styles.itemCard}
+              style={[
+                styles.itemCard,
+                { backgroundColor: colors.selectedDateCard }
+              ]}
               onPress={() => onItemPress(item)}
             >
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemDate}>{item.expirationDate}</Text>
+              <Text style={[
+                styles.itemName, 
+                { color: colorScheme === 'dark' ? colors.buttonText : colors.text }
+              ]}>
+                {item.name}
+              </Text>
+              <Text style={[
+                styles.itemDate, 
+                { 
+                  color: colorScheme === 'dark' ? colors.buttonText : colors.text,
+                  opacity: 0.7 
+                }
+              ]}>
+                {item.expirationDate}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
       ) : selectedDate ? (
-        <Text style={styles.noItemsText}>No items expiring on this date</Text>
+        <Text style={[styles.noItemsText, { color: colors.text, opacity: 0.5 }]}>No items expiring on this date</Text>
       ) : (
-        <Text style={styles.noItemsText}>Please select a date to view items</Text>
+        <Text style={[styles.noItemsText, { color: colors.text, opacity: 0.5 }]}>Please select a date to view items</Text>
       )}
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   itemsSection: {
@@ -81,32 +106,26 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     width: '48%',
-    backgroundColor: 'rgba(203, 230, 243, 0.5)',
     padding: 15,
     borderRadius: 10,
-    borderColor: '#00adf5',
-    borderWidth: 1,
     marginBottom: 10,
     alignItems: 'center',
-
   },
   itemName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color:'#1d476eff'
   },
   itemDate: {
     fontSize: 14,
-    color: 'gray',
     marginTop: 5,
   },
-    noItemsText: {
+  noItemsText: {
     textAlign: 'center',
     fontSize: 16,
-    color: 'gray',
     fontStyle: 'italic',
     marginTop: 20,
   },
 });
+
 
 export default ExpirationItems;
