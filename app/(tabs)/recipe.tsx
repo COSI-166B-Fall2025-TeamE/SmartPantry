@@ -6,6 +6,7 @@ import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
 import { useRouter } from 'expo-router';
 
+
 interface Recipe {
   idMeal: string;
   strMeal: string;
@@ -26,7 +27,9 @@ interface Recipe {
   dateModified: string | null;
 }
 
+
 const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
+
 
 export default function RecipeTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -37,10 +40,12 @@ export default function RecipeTabScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
+
   // Fetch recipes from TheMealDB API
   useEffect(() => {
     fetchRecipes();
   }, [selectedCategory]);
+
 
   const fetchRecipes = async () => {
     setLoading(true);
@@ -95,6 +100,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   const formatRecipe = (meal: any): Recipe => {
     // Extract ingredients and measures from the meal object
     const ingredients = [];
@@ -110,6 +116,7 @@ export default function RecipeTabScreen() {
         });
       }
     }
+
 
     return {
       idMeal: meal.idMeal,
@@ -128,6 +135,7 @@ export default function RecipeTabScreen() {
       dateModified: meal.dateModified,
     };
   };
+
 
   // Search recipes by name AND ingredient simultaneously
   const handleSearch = async (query: string) => {
@@ -189,6 +197,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   // Debounce search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -197,8 +206,10 @@ export default function RecipeTabScreen() {
       }
     }, 500);
 
+
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
 
   // Filter recipes locally for shorter queries
   const displayedRecipes = searchQuery.length > 0 && searchQuery.length < 3
@@ -209,6 +220,7 @@ export default function RecipeTabScreen() {
         )
       )
     : recipes;
+
 
   return (
     <SafeAreaView 
@@ -288,6 +300,7 @@ export default function RecipeTabScreen() {
           ))}
         </ScrollView>
 
+
         {/* Recipe List */}
         {loading ? (
           <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -313,7 +326,10 @@ export default function RecipeTabScreen() {
                         />
                       </View>
                       
-                      <View style={[styles.recipeInfo, { backgroundColor: colors.card }]}>
+                      <View style={[
+                        styles.recipeInfo, 
+                        { backgroundColor: colorScheme === 'light' ? 'rgba(128, 128, 128, 0.05)' : colors.card }
+                      ]}>
                         <Text style={styles.recipeName} numberOfLines={2}>
                           {recipe.strMeal}
                         </Text>
@@ -355,6 +371,7 @@ export default function RecipeTabScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
