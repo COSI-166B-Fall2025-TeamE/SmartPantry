@@ -14,7 +14,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import Colors from '../../constants/templateColors';
+
 
 interface PantryItem {
   id: string;
@@ -22,34 +24,42 @@ interface PantryItem {
   quantity: string;
 }
 
+
 const SwipeableItem = ({ 
   item, 
   onDelete, 
   colorScheme,
   onSwipeStart,
-  onSwipeEnd 
+  onSwipeEnd,
+  isGridView
 }: { 
   item: PantryItem; 
   onDelete: () => void; 
   colorScheme: 'light' | 'dark';
   onSwipeStart: () => void;
   onSwipeEnd: () => void;
+  isGridView: boolean;
 }) => {
   const windowWidth = useWindowDimensions().width;
-  const cardWidth = windowWidth - 32;
+  const cardWidth = isGridView 
+    ? (windowWidth - 48) / 2 
+    : windowWidth - 32;
   const deleteButtonWidth = 100;
   
   const width = useRef(new Animated.Value(cardWidth)).current;
   const [isOpen, setIsOpen] = useState(false);
   const colors = Colors[colorScheme];
 
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
+        if (isGridView) return false;
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
         return isHorizontal && Math.abs(gestureState.dx) > 2;
       },
       onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        if (isGridView) return false;
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
         return isHorizontal && Math.abs(gestureState.dx) > 5;
       },
@@ -124,6 +134,7 @@ const SwipeableItem = ({
     })
   ).current;
 
+
   const handleDelete = () => {
     Alert.alert(
       'Remove Item',
@@ -150,6 +161,7 @@ const SwipeableItem = ({
     );
   };
 
+
   const handleCardPress = () => {
     if (isOpen) {
       Animated.spring(width, {
@@ -162,6 +174,42 @@ const SwipeableItem = ({
     }
   };
 
+
+  const handleLongPress = () => {
+    handleDelete();
+  };
+
+
+  if (isGridView) {
+    return (
+      <View style={styles.gridItemWrapper}>
+        <TouchableOpacity
+          style={[
+            styles.gridItemCard,
+            { backgroundColor: colors.card }
+          ]}
+          onLongPress={handleLongPress}
+          activeOpacity={0.7}
+        >
+          <Text 
+            style={[styles.gridItemName, { color: colors.text }]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {item.name}
+          </Text>
+          <Text 
+            style={[styles.gridItemQuantity, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {item.quantity}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+
   return (
     <View style={styles.swipeableContainer}>
       <View style={styles.deleteButtonContainer}>
@@ -172,6 +220,7 @@ const SwipeableItem = ({
           <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
       </View>
+
 
       <Animated.View
         style={[
@@ -207,6 +256,7 @@ const SwipeableItem = ({
   );
 };
 
+
 const MyPantryScreen = () => {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -223,14 +273,18 @@ const MyPantryScreen = () => {
     { id: '8', name: 'Eggs', quantity: '12 pcs' },
   ]);
 
+
   const [searchTerm, setSearchTerm] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('');
+  const [isGridView, setIsGridView] = useState(false);
+
 
   const filteredItems = pantryItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
 
   const addItem = () => {
     if (newItemName && newItemQuantity) {
@@ -248,17 +302,21 @@ const MyPantryScreen = () => {
     }
   };
 
+
   const removeItem = (id: string) => {
     setPantryItems(pantryItems.filter((item) => item.id !== id));
   };
+
 
   const handleSwipeStart = () => {
     flatListRef.current?.setNativeProps({ scrollEnabled: false });
   };
 
+
   const handleSwipeEnd = () => {
     flatListRef.current?.setNativeProps({ scrollEnabled: true });
   };
+
 
   const renderItem = ({ item }: { item: PantryItem }) => (
     <SwipeableItem
@@ -267,8 +325,10 @@ const MyPantryScreen = () => {
       colorScheme={colorScheme}
       onSwipeStart={handleSwipeStart}
       onSwipeEnd={handleSwipeEnd}
+      isGridView={isGridView}
     />
   );
+
 
   return (
     <SafeAreaView 
@@ -279,34 +339,58 @@ const MyPantryScreen = () => {
       edges={['top', 'left', 'right']}
     >
       {/* Header */}
-      <Text style={[styles.header, { color: colors.text }]}>My Pantry</Text>
+      <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.header, { color: colors.text }]}>My Pantry</Text>
+      </View>
 
-      {/* Search Bar */}
-      <TextInput
-        style={[
-          styles.searchBar,
-          { 
-            backgroundColor: colors.searchBar,
-            color: colors.text
-          }
-        ]}
-        placeholder="Search ingredients..."
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-        placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
-      />
+      {/* Search Bar with Toggle Button */}
+      <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+        <TextInput
+          style={[
+            styles.searchBar,
+            { 
+              backgroundColor: colors.searchBar,
+              color: colors.text
+            }
+          ]}
+          placeholder="Search ingredients..."
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+        />
+        <TouchableOpacity
+          style={[
+            styles.viewToggleButton, 
+            { 
+              backgroundColor: colorScheme === 'light' ? colors.buttonBackground : colors.card 
+            }
+          ]}
+          onPress={() => setIsGridView(!isGridView)}
+        >
+          <Ionicons 
+            name={isGridView ? 'list' : 'grid'} 
+            size={24} 
+            color={colorScheme === 'light' ? colors.buttonText : colors.text}
+          />
+        </TouchableOpacity>
+      </View>
+
 
       {/* Pantry Items List */}
       <FlatList
+        key={isGridView ? 'grid' : 'list'}
         ref={flatListRef}
         data={filteredItems}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
+        numColumns={isGridView ? 2 : 1}
         contentContainerStyle={styles.listContainer}
+        columnWrapperStyle={isGridView ? styles.gridRow : undefined}
         ListEmptyComponent={
           <Text style={[styles.emptyText, { color: colors.text }]}>No items found</Text>
         }
       />
+
 
       {/* Add Button */}
       <TouchableOpacity
@@ -322,6 +406,7 @@ const MyPantryScreen = () => {
         ]}>+ Add Item</Text>
       </TouchableOpacity>
 
+
       {/* Add Item Modal */}
       <Modal
         animationType="slide"
@@ -335,6 +420,7 @@ const MyPantryScreen = () => {
             { backgroundColor: colors.background }
           ]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Item</Text>
+
 
             <TextInput
               style={[
@@ -351,6 +437,7 @@ const MyPantryScreen = () => {
               onChangeText={setNewItemName}
             />
 
+
             <TextInput
               style={[
                 styles.input,
@@ -366,6 +453,7 @@ const MyPantryScreen = () => {
               onChangeText={setNewItemQuantity}
             />
 
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[
@@ -380,6 +468,7 @@ const MyPantryScreen = () => {
                   { color: colors.secondaryButtonText }
                 ]}>Cancel</Text>
               </TouchableOpacity>
+
 
               <TouchableOpacity
                 style={[
@@ -402,27 +491,49 @@ const MyPantryScreen = () => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
   header: {
     fontSize: 24,
     fontWeight: 'bold',
-    padding: 20,
     textAlign: 'center',
-    marginBottom: 5,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    gap: 8,
   },
   searchBar: {
-    margin: 16,
+    flex: 1,
+    height: 50,
     padding: 12,
     borderRadius: 12,
     fontSize: 16,
     borderWidth: 0,
   },
+  viewToggleButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   listContainer: {
     padding: 16,
     paddingBottom: 80,
+  },
+  gridRow: {
+    justifyContent: 'space-between',
   },
   swipeableContainer: {
     marginBottom: 12,
@@ -474,6 +585,29 @@ const styles = StyleSheet.create({
   itemQuantity: {
     fontSize: 13,
     opacity: 0.7,
+  },
+  gridItemWrapper: {
+    flex: 1,
+    marginBottom: 12,
+    maxWidth: '48%',
+  },
+  gridItemCard: {
+    borderRadius: 12,
+    padding: 16,
+    minHeight: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridItemName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  gridItemQuantity: {
+    fontSize: 13,
+    opacity: 0.7,
+    textAlign: 'center',
   },
   addButton: {
     position: 'absolute',
@@ -551,5 +685,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
 
 export default MyPantryScreen;
