@@ -11,10 +11,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import EditScreenInfo from '@/components/EditScreenInfo';
+
 // import { expirationItems } from '@/data/ItemsList';
-
-
-
 
 interface Item  {
   id: string;
@@ -23,6 +21,9 @@ interface Item  {
 }
 
 export default function TabOneScreen() {
+  const linkToPantry = () => {
+    router.push('/pantry?openModal=true');
+  };
 
   const [permission, requestPermission] = useCameraPermissions();
   // const isPermissionGranted = Boolean(permission?.granted); // We don't need this line anymore
@@ -44,6 +45,8 @@ export default function TabOneScreen() {
     loadItems();
   }, []);
 
+  
+
   const loadItems = async () => {
     const result = await fetchAllData('expiration');
     if (result.success) {
@@ -52,6 +55,7 @@ export default function TabOneScreen() {
       console.error('Error loading items:', result.error);
     }
   };
+  
 
   //const userNames = [
   //'Alex', 'Bailey', 'Casey', 'Drew', 'Emery', 'Finley', 'Harley', 'Indigo',
@@ -65,9 +69,10 @@ export default function TabOneScreen() {
   const months = [
   'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
-];
+  ];
   const now = new Date();
   const currentDate = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  
   //const currentDate = 'SEPTEMBER 29, 2025';
 
   // --- THIS IS THE NEW HANDLER FUNCTION --- // <-- CHANGED
@@ -87,7 +92,6 @@ export default function TabOneScreen() {
       Alert.alert('Permission Denied', 'Camera permission is required to scan barcodes.');
     }
   };
-
 
   return (
     <SafeAreaProvider>
@@ -226,7 +230,7 @@ export default function TabOneScreen() {
         </View>
         
         {/* Manual Entry Button */}
-        <TouchableOpacity style={styles.manualButton}>
+        <TouchableOpacity style={styles.manualButton} onPress={linkToPantry}>
           <View style={styles.manualButtonTextContainer}>
             <Text style={styles.manualButtonText}>Enter Items Manually</Text>
           </View>
