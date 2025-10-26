@@ -1,8 +1,11 @@
 import { expirationItems } from './ItemsList';
 
 export interface ExpiryItem {
+  id: string;
   expirationDate?: string;
   remainingExpiryDays?: number;
+  name: string;
+  completed: boolean;
 }
 
 
@@ -26,7 +29,7 @@ export const calculateRemainingExpiryDays = (expirationDate: string, name: Strin
   const diffDays = Math.floor((expiryUTC - todayUTC) / MS_PER_DAY);
     //console.log({name, expirationDate, todayUTC, expiryUTC, diffDays });
 
-  return Math.max(0, diffDays);
+  return diffDays;
 };
 
 export const getActualExpiryItems = (): ExpiryItem[] => {
@@ -38,14 +41,16 @@ export const getActualExpiryItems = (): ExpiryItem[] => {
         ...item,
         id: item.id,
         expirationDate: item.expirationDate,
-        remainingExpiryDays
+        remainingExpiryDays,
+        name: item.name,
+        completed: false,
       };
 
   });
   return result;
 };
 
-export const getExpiringSoonItems = (daysThreshold: number = 7): ExpiryItem[] => {
+export const getExpiringSoonItems = (daysThreshold: number = 50): ExpiryItem[] => {
 
   return getActualExpiryItems().filter(item => 
     item.remainingExpiryDays !== undefined 
@@ -54,6 +59,7 @@ export const getExpiringSoonItems = (daysThreshold: number = 7): ExpiryItem[] =>
 };
 
 export const getExpiryColorByDays = (remainingExpiryDays: number): string => {
+  if (remainingExpiryDays < 0) return '#B71C1C'; // Darker red for expired items
   if (remainingExpiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
   if (remainingExpiryDays <= 5) return '#F44336'; // Red for 3-5 days
   if (remainingExpiryDays <= 7) return '#FF5722'; // Deep orange for 6-7 days
