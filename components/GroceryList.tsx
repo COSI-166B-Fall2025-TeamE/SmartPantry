@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { calculateRemainingExpiryDays, getExpiringSoonItems, getExpiryColorByDays } from '../data/expiryCalculator'; // Changed import
 import { deleteById, fetchAllData, insertData, updateById } from './DatabaseFunctions';
 
 type GroceryItem = {
@@ -18,36 +19,9 @@ type GroceryItem = {
   completed: boolean;
 };
 
-const getExpiryColor = (expiryDays: number) => {
-  if (expiryDays <= 2) return '#D32F2F'; // Dark red for 0-2 days
-  if (expiryDays <= 5) return '#F44336'; // Red for 3-5 days
-  if (expiryDays <= 7) return '#FF5722'; // Deep orange for 6-7 days
-  if (expiryDays <= 14) return '#FF9800'; // Orange for 1-2 weeks
-  if (expiryDays <= 30) return '#FFC107'; // Amber for 2-4 weeks
-  if (expiryDays <= 90) return '#8BC34A'; // Light green for 1-3 months
-  return '#4CAF50'; // Green for 3+ months
-};
 
-function daysDifference(dateString: string): number {
-  // Parse the input date string
-  const targetDate = new Date(dateString);
-  
-  // construct date
-  const now = new Date();
-  
-  // Reset time to midnight for both dates to get accurate day difference
-  targetDate.setHours(0, 0, 0, 0);
-  now.setHours(0, 0, 0, 0);
-  
-  // Calculate difference in milliseconds
-  const diffInMs = targetDate.getTime() - now.getTime();
-  
-  const MS_PER_DAY = 1000 * 60 * 60 * 24;
-  // Convert to days
-  const diffInDays = Math.round(diffInMs / (MS_PER_DAY));
-  
-  return diffInDays;
-}
+
+
 
 export default function GroceryList() {
   const [items, setItems] = useState<Array<GroceryItem>>([]);
@@ -55,9 +29,43 @@ export default function GroceryList() {
 
   const [suggestions, setExpirationSuggestions] = useState([]);
   
+  const loadItemsnew = async (currentGroceryItems) => {
+  const result = await fetchAllData('expiration');
+  if (result.success){
+      //console.log('Expiration data from DB:', result.data);
+      
+      const updatedItems = result.data.map((item, index) => {
+        if (!item.id) {
+          console.warn('Item without ID found:', item);
+        }
+        
+        return {
+          ...item,
+          id: item.id || item.name || `item_${index}_${Date.now()}`,
+          name: item.name || 'Unknown Item',
+          expiry: item.expirationDate,
+          expiryDays: calculateRemainingExpiryDays(item.expirationDate, item.name || 'Unknown')
+        };
+      });
+
+      //console.log('Processed items with IDs:', updatedItems);
+
+      const currentItemTexts = currentGroceryItems.map(item => item.text.toLowerCase());
+      const sortedFilteredItems = updatedItems.filter(
+        suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
+      ).sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
+
+      setExpirationSuggestions(sortedFilteredItems)
+  } else {
+    console.error('Error loading items:', result.error);
+  }
+};
+
+
+
   // Fetch all items on component mount
   useEffect(() => {
-    loadItems(items);
+    loadItemsnew(items);
   }, [items]);
 
   useEffect(() => {
@@ -76,7 +84,8 @@ export default function GroceryList() {
           return {
             ...item,
             expiry: item.expirationDate,
-            expiryDays: daysDifference(item.expirationDate) + 1 // Increment age
+            expiryDays: getExpiringSoonItems().find(expiryItem => expiryItem.id === item.id)?.remainingExpiryDays || 0// Changed function call
+
           };
         });
 
@@ -194,8 +203,17 @@ export default function GroceryList() {
                     >
                       <View style={styles.suggestionContent}>
                         <Text style={styles.suggestionText}>{suggestion.name}</Text>
-                        <Text style={[styles.suggestionExpiry, { color: getExpiryColor(suggestion.expiryDays) }]}>
-                          ⏱️ Expires in {suggestion.expiryDays} days
+                        <Text style={[
+                          suggestion.expiryDays < 0 
+                            ? styles.suggestionExpiryExpired 
+                            : styles.suggestionExpiry, 
+                          { color: getExpiryColorByDays(suggestion.expiryDays) }
+                        ]}>
+                          ⏱️ {suggestion.expiryDays > 0 
+                            ? `Expires in ${suggestion.expiryDays} days` 
+                            : suggestion.expiryDays < 0 
+                              ? `Expired for ${Math.abs(suggestion.expiryDays)} days` 
+                              : 'Expires today'}
                         </Text>
                       </View>
                       <Text style={styles.suggestionPlus}>+</Text>
@@ -382,6 +400,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     marginTop: 3,
+  },
+   suggestionExpiryExpired: {
+   fontSize: 11,
+   fontWeight: 'bold',
+   marginTop: 3,
   },
   suggestionPlus: {
     color: '#2196F3',
