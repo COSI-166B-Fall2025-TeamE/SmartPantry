@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -225,10 +225,11 @@ const MyPantryScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('');
-  
+
     useEffect(() => {
     if (params.openModal === 'true') {
       setModalVisible(true);
+      router.setParams({ openModal: undefined });
     }
   }, [params.openModal]);
 
