@@ -30,35 +30,35 @@ export default function GroceryList() {
   const [suggestions, setExpirationSuggestions] = useState([]);
   
   const loadItemsnew = async (currentGroceryItems) => {
-  const result = await fetchAllData('expiration');
-  if (result.success){
-      //console.log('Expiration data from DB:', result.data);
-      
-      const updatedItems = result.data.map((item, index) => {
-        if (!item.id) {
-          console.warn('Item without ID found:', item);
-        }
+    const result = await fetchAllData('expiration');
+    if (result.success){
+        //console.log('Expiration data from DB:', result.data);
         
-        return {
-          ...item,
-          id: item.id || item.name || `item_${index}_${Date.now()}`,
-          name: item.name || 'Unknown Item',
-          expiry: item.expirationDate,
-          expiryDays: calculateRemainingExpiryDays(item.expirationDate, item.name || 'Unknown')
-        };
-      });
+        const updatedItems = result.data.map((item, index) => {
+          if (!item.id) {
+            console.warn('Item without ID found:', item);
+          }
+          
+          return {
+            ...item,
+            id: item.id || item.name || `item_${index}_${Date.now()}`,
+            name: item.name || 'Unknown Item',
+            expiry: item.expirationDate,
+            expiryDays: calculateRemainingExpiryDays(item.expirationDate, item.name || 'Unknown')
+          };
+        });
 
-      //console.log('Processed items with IDs:', updatedItems);
+        //console.log('Processed items with IDs:', updatedItems);
 
-      const currentItemTexts = currentGroceryItems.map(item => item.text.toLowerCase());
-      const sortedFilteredItems = updatedItems.filter(
-        suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
-      ).sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
+        const currentItemTexts = currentGroceryItems.map(item => item.text.toLowerCase());
+        const sortedFilteredItems = updatedItems.filter(
+          suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
+        ).sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
 
-      setExpirationSuggestions(sortedFilteredItems)
-  } else {
-    console.error('Error loading items:', result.error);
-  }
+        setExpirationSuggestions(sortedFilteredItems)
+    } else {
+      console.error('Error loading items:', result.error);
+    }
 };
 
 
@@ -74,7 +74,7 @@ export default function GroceryList() {
 
   const loadGroceryList = async () => {
     const groceryResult = await fetchAllData('groceryList');
-    setItems(groceryResult.data)
+    sortItems(groceryResult.data)
   };
   
   const loadItems = async (currentGroceryItems) => {
