@@ -1,9 +1,10 @@
 import { Text, View } from '@/components/Themed';
 import { expirationItems } from '@/data/ItemsList';
-import React from 'react';
 import { StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import Colors from '@/constants/templateColors';
 
+import React, { useEffect, useState } from 'react';
+import { fetchAllData } from './DatabaseFunctions';
 
 interface ExpirationItem {
   id: string;
@@ -22,6 +23,19 @@ interface ExpirationItemsProps {
 const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemPress }) => {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  
+  const [expirationItems, setItems] = useState([]);
+
+  // Fetch all items on component mount
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    const result = await fetchAllData('expiration');
+    setItems(result.data);
+  };
+  
   
   const filteredItems = selectedDate 
     ? expirationItems.filter(item => item.expirationDate === selectedDate)

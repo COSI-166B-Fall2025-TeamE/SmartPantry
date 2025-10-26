@@ -1,6 +1,6 @@
+import { fetchAllData } from '@/components/DatabaseFunctions';
 import ExpirationItems from '@/components/ExpirationItems';
 import { Text, View } from '@/components/Themed';
-import { expirationItems } from '@/data/ItemsList';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, useColorScheme } from 'react-native';
@@ -28,9 +28,20 @@ export default function ExpirationTabScreen() {
 
 
   const today = new Date().toISOString().split('T')[0];
-  const itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
+  var itemsExpiringToday = [];
   
+
+  const [expirationItems, setItems] = useState([]);
+
+  // Fetch all items on component mount
   useEffect(() => {
+    loadItems();
+  }, []);
+
+  useEffect(() => {
+
+    itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
+
     const newMarkedDates: {[date: string]: any} = {};
     
     expirationItems.forEach(item => {
@@ -47,8 +58,13 @@ export default function ExpirationTabScreen() {
 
 
     setMarkedDates(newMarkedDates);
-  }, []);
+  }, [expirationItems]);
 
+
+  const loadItems = async () => {
+    const result = await fetchAllData('expiration');
+    setItems(result.data);
+  };
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -270,8 +286,85 @@ export default function ExpirationTabScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
-              </ScrollView>
-            </View>
+                </ScrollView>
+              </View>
+            )}
+            {searchQuery.trim() !== '' && searchResults.length === 0 && (
+              <View style={styles.searchResults}>
+                <Text style={styles.noResults}>No items found</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        <Text style={styles.todayInfo}>
+          {expirationItems.filter(item => item.expirationDate === today).length > 0 
+            ? <>
+                Expires today ({today}): 
+                {expirationItems.filter(item => item.expirationDate === today).map((item, index) => (
+                  <Text key={item.id}>
+                    {index > 0 && ', '}
+                    <Text style={styles.boldItemName}>{item.name}</Text>
+                  </Text>
+                ))}
+              </>
+            : 'No items expire today'}
+        </Text>
+        <Text style={styles.instruction}>*there are things that will expire on dates with dots</Text>
+        <View style={styles.separator} lightColor="#ddd" darkColor="rgba(255,255,255,0.2)" />
+
+        <ScrollView>
+        {/* Calendar Section with Marked Dates */}
+        <Calendar
+          onDayPress={handleDayPress}
+          markedDates={{
+            ...markedDates,
+            [selectedDate]: {
+              ...(markedDates[selectedDate] || {}),
+              selected: true,
+              selectedColor: '#00adf5',
+            }
+          }}
+          markingType={'multi-dot'}
+          theme={{
+            selectedDayBackgroundColor: '#00adf5',
+            todayTextColor: '#00adf5',
+            arrowColor: 'grey',
+          }}
+        />
+
+        {/* Enhanced Item Display */}
+        <View style={styles.itemsContainer}>
+          <Text style={[styles.sectionTitle, styles.expireTitle]}>
+            {selectedDate 
+              ? `Items expiring on ${selectedDate}` 
+              : 'Select a date to see expiring items'}
+          </Text>
+          
+          <ScrollView style={styles.itemsList}>
+            <ExpirationItems 
+              selectedDate={selectedDate} 
+              onItemPress={handleItemPress} 
+            />
+          </ScrollView>
+        </View> 
+        
+        <View style={styles.allItemsContainer}>
+          <Text style={[styles.sectionTitle, styles.leftAlignTitle]}>All Expiring Items</Text>
+          <ScrollView 
+            horizontal={true} 
+            showsHorizontalScrollIndicator={true}
+            style={styles.allItemsList}
+            contentContainerStyle={styles.allItemsContentContainer}
+          >
+            {expirationItems
+              .sort((a, b) => a.expirationDate.localeCompare(b.expirationDate))
+              .map((item) => (
+                <View key={item.id} style={styles.allItemCard}>
+                  <Text style={styles.allItemName}>{item.name}</Text>
+                  <Text style={styles.allItemDate}>Expires: {item.expirationDate}</Text>
+                </View>
+              ))}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
