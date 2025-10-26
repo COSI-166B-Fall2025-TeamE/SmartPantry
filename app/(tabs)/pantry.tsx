@@ -1,17 +1,9 @@
-import { useState, useRef } from 'react';
-import { useColorScheme } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  Modal,
   Alert,
-  Animated,
-  PanResponder,
-  useWindowDimensions,
+  Animated, FlatList, Modal, PanResponder, StyleSheet, Text, TextInput,
+  TouchableOpacity, useColorScheme, useWindowDimensions, View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/templateColors';
@@ -216,6 +208,7 @@ const MyPantryScreen = () => {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const flatListRef = useRef<FlatList>(null);
+  const params = useLocalSearchParams();
   
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([
     { id: '1', name: 'Flour', quantity: '2 kg' },
@@ -232,6 +225,13 @@ const MyPantryScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('');
+  
+    useEffect(() => {
+    if (params.openModal === 'true') {
+      setModalVisible(true);
+    }
+  }, [params.openModal]);
+
 
   const filteredItems = pantryItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -252,6 +252,7 @@ const MyPantryScreen = () => {
       Alert.alert('Error', 'Please fill in all fields');
     }
   };
+  
 
   const removeItem = (id: string) => {
     setPantryItems(pantryItems.filter((item) => item.id !== id));
