@@ -8,13 +8,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'react-native-calendars';
 import Colors from '@/constants/templateColors';
 
-
 interface ExpirationItem {
   id: string;
   name: string;
   expirationDate: string;
 }
-
 
 export default function ExpirationTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -26,12 +24,9 @@ export default function ExpirationTabScreen() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<ExpirationItem[]>([]);
 
-
   const today = new Date().toISOString().split('T')[0];
-  var itemsExpiringToday = [];
   
-
-  const [expirationItems, setItems] = useState([]);
+  const [expirationItems, setItems] = useState<ExpirationItem[]>([]);
 
   // Fetch all items on component mount
   useEffect(() => {
@@ -39,9 +34,6 @@ export default function ExpirationTabScreen() {
   }, []);
 
   useEffect(() => {
-
-    itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
-
     const newMarkedDates: {[date: string]: any} = {};
     
     expirationItems.forEach(item => {
@@ -56,10 +48,8 @@ export default function ExpirationTabScreen() {
       }
     });
 
-
     setMarkedDates(newMarkedDates);
   }, [expirationItems]);
-
 
   const loadItems = async () => {
     const result = await fetchAllData('expiration');
@@ -75,14 +65,12 @@ export default function ExpirationTabScreen() {
       );
       setSearchResults(filtered);
     }
-  }, [searchQuery]); 
-
+  }, [searchQuery, expirationItems]); 
 
   const handleDayPress = (day: any) => {
     console.log('Selected day:', day.dateString);
     setSelectedDate(day.dateString);
   };
-
 
   const handleItemPress = (item: ExpirationItem) => {
     Alert.alert(
@@ -92,7 +80,6 @@ export default function ExpirationTabScreen() {
     );
   };
 
-
   const handleScreenPress = () => {
     if (showSearch) {
       setShowSearch(false);
@@ -101,6 +88,7 @@ export default function ExpirationTabScreen() {
     }
   };
 
+  const itemsExpiringToday = expirationItems.filter(item => item.expirationDate === today);
 
   return (
     <SafeAreaView 
@@ -134,9 +122,7 @@ export default function ExpirationTabScreen() {
             </TouchableOpacity>      
           </TouchableOpacity>
 
-
           <Text style={[styles.subtitle, { color: colors.text }]}>Track your food expiration dates</Text>
-
 
           {showSearch && (
             <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
@@ -180,7 +166,6 @@ export default function ExpirationTabScreen() {
             </View>
           )}
 
-
           <View style={[styles.todayContainer, { backgroundColor: colors.todayCard }]}>
             <Text style={[styles.todayInfo, { color: colors.buttonBackground }]}>
               {itemsExpiringToday.length > 0 
@@ -199,7 +184,6 @@ export default function ExpirationTabScreen() {
               *Dots indicate items expiring on that date
             </Text>
           </View>
-
 
           <ScrollView 
             style={styles.scrollView} 
@@ -247,7 +231,6 @@ export default function ExpirationTabScreen() {
               />
             </View>
 
-
             {/* Items expiring on selected date */}
             <View style={[styles.itemsContainer, { backgroundColor: colors.background }]}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -286,92 +269,14 @@ export default function ExpirationTabScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
-                </ScrollView>
-              </View>
-            )}
-            {searchQuery.trim() !== '' && searchResults.length === 0 && (
-              <View style={styles.searchResults}>
-                <Text style={styles.noResults}>No items found</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <Text style={styles.todayInfo}>
-          {expirationItems.filter(item => item.expirationDate === today).length > 0 
-            ? <>
-                Expires today ({today}): 
-                {expirationItems.filter(item => item.expirationDate === today).map((item, index) => (
-                  <Text key={item.id}>
-                    {index > 0 && ', '}
-                    <Text style={styles.boldItemName}>{item.name}</Text>
-                  </Text>
-                ))}
-              </>
-            : 'No items expire today'}
-        </Text>
-        <Text style={styles.instruction}>*there are things that will expire on dates with dots</Text>
-        <View style={styles.separator} lightColor="#ddd" darkColor="rgba(255,255,255,0.2)" />
-
-        <ScrollView>
-        {/* Calendar Section with Marked Dates */}
-        <Calendar
-          onDayPress={handleDayPress}
-          markedDates={{
-            ...markedDates,
-            [selectedDate]: {
-              ...(markedDates[selectedDate] || {}),
-              selected: true,
-              selectedColor: '#00adf5',
-            }
-          }}
-          markingType={'multi-dot'}
-          theme={{
-            selectedDayBackgroundColor: '#00adf5',
-            todayTextColor: '#00adf5',
-            arrowColor: 'grey',
-          }}
-        />
-
-        {/* Enhanced Item Display */}
-        <View style={styles.itemsContainer}>
-          <Text style={[styles.sectionTitle, styles.expireTitle]}>
-            {selectedDate 
-              ? `Items expiring on ${selectedDate}` 
-              : 'Select a date to see expiring items'}
-          </Text>
-          
-          <ScrollView style={styles.itemsList}>
-            <ExpirationItems 
-              selectedDate={selectedDate} 
-              onItemPress={handleItemPress} 
-            />
-          </ScrollView>
-        </View> 
-        
-        <View style={styles.allItemsContainer}>
-          <Text style={[styles.sectionTitle, styles.leftAlignTitle]}>All Expiring Items</Text>
-          <ScrollView 
-            horizontal={true} 
-            showsHorizontalScrollIndicator={true}
-            style={styles.allItemsList}
-            contentContainerStyle={styles.allItemsContentContainer}
-          >
-            {expirationItems
-              .sort((a, b) => a.expirationDate.localeCompare(b.expirationDate))
-              .map((item) => (
-                <View key={item.id} style={styles.allItemCard}>
-                  <Text style={styles.allItemName}>{item.name}</Text>
-                  <Text style={styles.allItemDate}>Expires: {item.expirationDate}</Text>
-                </View>
-              ))}
+              </ScrollView>
+            </View>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   safeArea: {

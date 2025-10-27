@@ -15,7 +15,6 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import GroceryList from '@/components/GroceryList';
 
 import { getExpiryColor, getSuggestions } from '@/data/suggestions';
 import Colors from '@/constants/templateColors';
