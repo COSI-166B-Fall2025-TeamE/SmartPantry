@@ -1,12 +1,17 @@
-import { useLocalSearchParams, router } from 'expo-router';
+import { deleteById, fetchAllData, insertData } from '@/components/DatabaseFunctions';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Animated, FlatList, Modal, PanResponder, StyleSheet, Text, TextInput,
+  Animated,
+  FlatList, Modal, PanResponder,
+  StyleSheet, Text, TextInput,
   TouchableOpacity, useColorScheme, useWindowDimensions, View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Colors from '../../constants/templateColors';
+
 
 interface PantryItem {
   id: string;
@@ -225,29 +230,48 @@ const MyPantryScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('');
+  const [newDate, setNewDate] = useState(new Date());
 
-    useEffect(() => {
+  useEffect(() => {
     if (params.openModal === 'true') {
       setModalVisible(true);
       router.setParams({ openModal: undefined });
     }
   }, [params.openModal]);
 
+  useEffect(() => {
+    loadPantryItems()
+  }, [])
+
+  const loadPantryItems = async () => {
+    const pantryResult = await fetchAllData('expiration');
+    setPantryItems(pantryResult.data)
+  };
 
   const filteredItems = pantryItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const addItem = () => {
-    if (newItemName && newItemQuantity) {
+  const addItem = async () => {
+    if (newItemName && newItemQuantity && newDate) {
+      const newDateString = newDate.toISOString().substring(0, 10);
+      
+      console.log(newDate)
       const newItem = {
         id: Date.now().toString(),
         name: newItemName,
         quantity: newItemQuantity,
+        expirationDate: newDateString,
       };
+
+      // const newItem = { id: Date.now().toString(), text: itemText, completed: false };
+      // sortItems([...items, newItem]);
+      // setInputText('');
+      await insertData('expiration', newItem);
       setPantryItems([...pantryItems, newItem]);
       setNewItemName('');
       setNewItemQuantity('');
+      setNewDate(new Date());
       setModalVisible(false);
     } else {
       Alert.alert('Error', 'Please fill in all fields');
@@ -255,8 +279,9 @@ const MyPantryScreen = () => {
   };
   
 
-  const removeItem = (id: string) => {
+  const removeItem = async (id: string) => {
     setPantryItems(pantryItems.filter((item) => item.id !== id));
+    const result = await deleteById('expiration', id);
   };
 
   const handleSwipeStart = () => {
@@ -276,6 +301,11 @@ const MyPantryScreen = () => {
       onSwipeEnd={handleSwipeEnd}
     />
   );
+
+  const onChange = (event, selectedDate) => {
+    const currentDate = selectedDate || newDate;
+    setNewDate(currentDate);
+  };
 
   return (
     <SafeAreaView 
@@ -357,7 +387,7 @@ const MyPantryScreen = () => {
               value={newItemName}
               onChangeText={setNewItemName}
             />
-
+            
             <TextInput
               style={[
                 styles.input,
@@ -371,6 +401,14 @@ const MyPantryScreen = () => {
               placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
               value={newItemQuantity}
               onChangeText={setNewItemQuantity}
+            />
+            <Text>Expiration Date:</Text>
+            <DateTimePicker
+                  testID="dateTimePicker"
+                  value={newDate}
+                  is24Hour={true}
+                  display="default"
+                  onChange={onChange}
             />
 
             <View style={styles.modalButtons}>
