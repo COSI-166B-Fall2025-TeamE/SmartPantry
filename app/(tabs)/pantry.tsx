@@ -14,8 +14,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';  
 import Colors from '../../constants/templateColors';
+
 
 
 interface PantryItem {
@@ -23,6 +24,7 @@ interface PantryItem {
   name: string;
   quantity: string;
 }
+
 
 
 const SwipeableItem = ({ 
@@ -47,19 +49,24 @@ const SwipeableItem = ({
   const deleteButtonWidth = 100;
   
   const width = useRef(new Animated.Value(cardWidth)).current;
+  const containerHeight = useRef(new Animated.Value(80)).current;
+  const containerMargin = useRef(new Animated.Value(12)).current;
+  const containerOpacity = useRef(new Animated.Value(1)).current;
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const colors = Colors[colorScheme];
+
 
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (isGridView) return false;
+        if (isGridView || isDeleting) return false;
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
         return isHorizontal && Math.abs(gestureState.dx) > 2;
       },
       onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        if (isGridView) return false;
+        if (isGridView || isDeleting) return false;
         const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
         return isHorizontal && Math.abs(gestureState.dx) > 5;
       },
@@ -135,31 +142,31 @@ const SwipeableItem = ({
   ).current;
 
 
+
   const handleDelete = () => {
-    Alert.alert(
-      'Remove Item',
-      'Are you sure you want to remove this item?',
-      [
-        { 
-          text: 'Cancel', 
-          style: 'cancel',
-        },
-        {
-          text: 'Remove',
-          onPress: () => {
-            Animated.timing(width, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: false,
-            }).start(() => {
-              onDelete();
-            });
-          },
-          style: 'destructive',
-        },
-      ]
-    );
+    setIsDeleting(true);
+    // Animate container height, margin, and opacity
+    Animated.parallel([
+      Animated.timing(containerHeight, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(containerMargin, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(containerOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      onDelete();
+    });
   };
+
 
 
   const handleCardPress = () => {
@@ -175,9 +182,11 @@ const SwipeableItem = ({
   };
 
 
+
   const handleLongPress = () => {
     handleDelete();
   };
+
 
 
   if (isGridView) {
@@ -210,51 +219,63 @@ const SwipeableItem = ({
   }
 
 
+
   return (
-    <View style={styles.swipeableContainer}>
-      <View style={styles.deleteButtonContainer}>
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDelete}
+    <Animated.View 
+      style={[
+        styles.outerContainer,
+        { 
+          height: containerHeight,
+          marginBottom: containerMargin,
+          opacity: containerOpacity,
+        }
+      ]}
+    >
+      <View style={styles.swipeableContainer}>
+        <View style={styles.deleteButtonContainer}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+          >
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Animated.View
+          style={[
+            styles.itemCard,
+            { 
+              backgroundColor: colors.card,
+              width: width,
+            },
+          ]}
+          {...panResponder.panHandlers}
         >
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.itemInfo, { backgroundColor: 'transparent' }]}
+            onPress={handleCardPress}
+            activeOpacity={0.7}
+          >
+            <Text 
+              style={[styles.itemName, { color: colors.text }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.name}
+            </Text>
+            <Text 
+              style={[styles.itemQuantity, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {item.quantity}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
-
-
-      <Animated.View
-        style={[
-          styles.itemCard,
-          { 
-            backgroundColor: colors.card,
-            width: width,
-          },
-        ]}
-        {...panResponder.panHandlers}
-      >
-        <TouchableOpacity 
-          style={[styles.itemInfo, { backgroundColor: 'transparent' }]}
-          onPress={handleCardPress}
-          activeOpacity={0.7}
-        >
-          <Text 
-            style={[styles.itemName, { color: colors.text }]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {item.name}
-          </Text>
-          <Text 
-            style={[styles.itemQuantity, { color: colors.text }]}
-            numberOfLines={1}
-          >
-            {item.quantity}
-          </Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
+    </Animated.View>
   );
 };
+
 
 
 const MyPantryScreen = () => {
@@ -274,6 +295,7 @@ const MyPantryScreen = () => {
   ]);
 
 
+
   const [searchTerm, setSearchTerm] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -281,9 +303,11 @@ const MyPantryScreen = () => {
   const [isGridView, setIsGridView] = useState(false);
 
 
+
   const filteredItems = pantryItems.filter((item) =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
 
 
   const addItem = () => {
@@ -303,9 +327,11 @@ const MyPantryScreen = () => {
   };
 
 
+
   const removeItem = (id: string) => {
     setPantryItems(pantryItems.filter((item) => item.id !== id));
   };
+
 
 
   const handleSwipeStart = () => {
@@ -313,9 +339,11 @@ const MyPantryScreen = () => {
   };
 
 
+
   const handleSwipeEnd = () => {
     flatListRef.current?.setNativeProps({ scrollEnabled: true });
   };
+
 
 
   const renderItem = ({ item }: { item: PantryItem }) => (
@@ -330,6 +358,7 @@ const MyPantryScreen = () => {
   );
 
 
+
   return (
     <SafeAreaView 
       style={[
@@ -342,6 +371,7 @@ const MyPantryScreen = () => {
       <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
         <Text style={[styles.header, { color: colors.text }]}>My Pantry</Text>
       </View>
+
 
       {/* Search Bar with Toggle Button */}
       <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
@@ -376,6 +406,7 @@ const MyPantryScreen = () => {
       </View>
 
 
+
       {/* Pantry Items List */}
       <FlatList
         key={isGridView ? 'grid' : 'list'}
@@ -390,6 +421,7 @@ const MyPantryScreen = () => {
           <Text style={[styles.emptyText, { color: colors.text }]}>No items found</Text>
         }
       />
+
 
 
       {/* Add Button */}
@@ -407,6 +439,7 @@ const MyPantryScreen = () => {
       </TouchableOpacity>
 
 
+
       {/* Add Item Modal */}
       <Modal
         animationType="slide"
@@ -420,6 +453,7 @@ const MyPantryScreen = () => {
             { backgroundColor: colors.background }
           ]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Item</Text>
+
 
 
             <TextInput
@@ -438,6 +472,7 @@ const MyPantryScreen = () => {
             />
 
 
+
             <TextInput
               style={[
                 styles.input,
@@ -454,6 +489,7 @@ const MyPantryScreen = () => {
             />
 
 
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[
@@ -468,6 +504,7 @@ const MyPantryScreen = () => {
                   { color: colors.secondaryButtonText }
                 ]}>Cancel</Text>
               </TouchableOpacity>
+
 
 
               <TouchableOpacity
@@ -490,6 +527,7 @@ const MyPantryScreen = () => {
     </SafeAreaView>
   );
 };
+
 
 
 const styles = StyleSheet.create({
@@ -535,8 +573,10 @@ const styles = StyleSheet.create({
   gridRow: {
     justifyContent: 'space-between',
   },
+  outerContainer: {
+    overflow: 'hidden',
+  },
   swipeableContainer: {
-    marginBottom: 12,
     position: 'relative',
     height: 80,
     flexDirection: 'row',
@@ -685,6 +725,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
 
 
 export default MyPantryScreen;
