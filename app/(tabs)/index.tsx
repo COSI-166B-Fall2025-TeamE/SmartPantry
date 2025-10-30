@@ -109,7 +109,7 @@ export default function TabOneScreen() {
           </View>
         </TouchableOpacity>
           
-        <TouchableOpacity style={styles.profileButton}>
+        <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/auth/login')}>
           <Ionicons name="person" size={24} color="#4A4A4A" />
         </TouchableOpacity>
       </View>
