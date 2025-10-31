@@ -1,15 +1,17 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { validatePassword } from '../auth/passwordValidator';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [usernameError, setUsernameError] = useState(''); 
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const validateUsername = (text: string) => {
-    // Check if the username is at most 8 characters long and contains only alphanumeric characters
-    if (text.length > 8) {
+    // Check if the username is at most 20 characters long and contains only alphanumeric characters
+    if (text.length > 20) {
       return false;
     }
     // Check  if the username contains only alphanumeric characters
@@ -19,8 +21,8 @@ export default function LoginScreen() {
 
   const handleUsernameChange = (text: string) => {
     
-    // limit  username to 8 characters 
-    if (text.length <= 8) {
+    // limit  username to 20 characters 
+    if (text.length <= 20) {
       setUsername(text);
     }
 
@@ -35,6 +37,19 @@ export default function LoginScreen() {
     }
   };
 
+  const handlePasswordChange = (text: string) => {
+    setPassword(text);
+    setPasswordError(''); //clear previous error message
+    
+    // authentilize current input password
+    if (text.length > 0) {
+      const { isValid, errorMessage } = validatePassword(text);
+      if (!isValid) {
+        setPasswordError(errorMessage);
+      }
+    }
+  };
+
   const handleLogin = () => {
     console.log("Username:", username);
     console.log("Password:", password);
@@ -43,7 +58,17 @@ export default function LoginScreen() {
     if (!validateUsername(username)) {
       Alert.alert(
         'Invalid Username',
-        'Username must be exactly 8 characters long and contain only letters and numbers.',
+        'Username must be less than 20 characters and contain only letters and numbers.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    // Validate password
+    const { isValid, errorMessage } = validatePassword(password);
+    if (!isValid) {
+      Alert.alert(
+        'Invalid Password',
+        errorMessage,
         [{ text: 'OK' }]
       );
       return;
@@ -74,8 +99,15 @@ export default function LoginScreen() {
         placeholder="Password"
         value={password}
         secureTextEntry
-        onChangeText={setPassword}
+        onChangeText={handlePasswordChange}//judge password
       />
+      
+      {passwordError ? (// display error message
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{passwordError}</Text>
+        </View>
+      ) : null}
+
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Sign In</Text>
       </TouchableOpacity>
