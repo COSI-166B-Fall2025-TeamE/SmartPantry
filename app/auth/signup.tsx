@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { validatePassword } from '../auth/passwordValidator';
+import validatePassword from '../auth/passwordValidator';
 
 
 export default function SignUpScreen() {

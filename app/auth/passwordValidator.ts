@@ -1,4 +1,4 @@
-export const validatePassword = (password: string): { isValid: boolean; errorMessage: string } => {
+const validatePassword = (password: string): { isValid: boolean; errorMessage: string } => {
   const errors: string[] = [];
   
   // Check length of the password (at least 8 digits)
@@ -43,3 +43,5 @@ export const validatePassword = (password: string): { isValid: boolean; errorMes
     errorMessage: ''
   };
 };
+
+export default validatePassword;

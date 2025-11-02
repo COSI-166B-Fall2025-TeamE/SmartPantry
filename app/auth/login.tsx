@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { validatePassword } from '../auth/passwordValidator';
+import validatePassword from '../auth/passwordValidator';
 
 import AsyncStorage from '@react-native-async-storage/async-storage'; //use  async storage to store user data before implement super base
 
@@ -140,7 +140,7 @@ export default function LoginScreen() {
             value={username}
             onChangeText={handleUsernameChange}
             autoCapitalize="none"
-            maxLength={8}
+            maxLength={20}
           />
 
           {usernameError ? (
