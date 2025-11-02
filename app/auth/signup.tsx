@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { validatePassword } from '../auth/passwordValidator';
+
 
 export default function SignUpScreen() {
   const router = useRouter();
 
   const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+
   const [email, setEmail] = useState('');
 
   const [password, setPassword] = useState('');
@@ -17,6 +20,29 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const validateUsername = (text: string) => {
+  //check if username is at most 20 characters long
+  if (text.length > 20) {
+    return false;
+  }
+  //check if username contains only alphanumeric characters
+  const regex = /^[a-zA-Z0-9]+$/;
+  return regex.test(text);
+};
+
+  const handleUsernameChange = (text: string) => {
+    //limit username to 20 characters
+    if (text.length <= 20) {
+      setUsername(text);
+    }
+  
+  setUsernameError('');
+  if (text.length > 0) {
+    if (!validateUsername(text)) {
+      setUsernameError('Username can only contain letters and numbers and must be no longer than 20 characters');
+    }
+  }
+};
   const handlePasswordChange = (text: string) => {
     setPassword(text);
     setPasswordError(''); //clear previous error message
@@ -44,6 +70,15 @@ export default function SignUpScreen() {
     console.log("Email:", email);
     console.log("Password:", password);
     
+    if (!validateUsername(username)) {
+      Alert.alert(
+        'Invalid Username',
+        'Username must be less than 20 characters and contain only letters and numbers.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     // Validate password
     const { isValid, errorMessage } = validatePassword(password);
     if (!isValid) {
@@ -68,9 +103,6 @@ export default function SignUpScreen() {
     // TODO: wait to replace with navigation back or success message
   };
 
-  const handleDismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
 
   return (
     <View style={styles.container}>
@@ -81,8 +113,15 @@ export default function SignUpScreen() {
         placeholder="Username"
         autoCapitalize="none"
         value={username}
-        onChangeText={setUsername}
+        onChangeText={handleUsernameChange}
+        maxLength={20}
       />
+      {usernameError ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{usernameError}</Text>
+        </View>
+      ) : null}
+
       <TextInput
         style={styles.input}
         placeholder="Email"
