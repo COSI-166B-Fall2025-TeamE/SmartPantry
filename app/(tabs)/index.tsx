@@ -4,9 +4,11 @@ import { Text, View } from '@/components/Themed';
 import { Colors } from '@/constants/globalStyles';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
-import { Link, router } from 'expo-router'; // <-- CHANGED (Imported router)
-import { useEffect, useState } from 'react'; //
+import { Link, router, useFocusEffect } from 'expo-router'; // <-- CHANGED (Imported router)
+import { useCallback, useEffect, useState } from 'react'; //
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 import { fetchAllData } from '@/components/DatabaseFunctions';
@@ -21,6 +23,27 @@ interface Item  {
 }
 
 export default function TabOneScreen() {
+
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  useFocusEffect(
+    useCallback(() => {
+      checkUserData();
+    }, [])
+  );
+  const checkUserData = async () => {
+    try {
+      const user = await AsyncStorage.getItem('user');
+      const loggedIn = await AsyncStorage.getItem('loggedIn');
+      
+      setCurrentUser(user);
+      setIsLoggedIn(loggedIn === 'true');
+    } catch (error) {
+      console.error('Error reading user data:', error);
+    }
+  };
+
   const linkToPantry = () => {
     router.push('/pantry?openModal=true');
   };
@@ -65,7 +88,7 @@ export default function TabOneScreen() {
   //const userName = userNames[Math.floor(Math.random() * userNames.length)];
 
   //const userName = 'Promise';
-  const userName = 'User';
+  //const userName = 'User';
   const months = [
   'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
@@ -109,7 +132,7 @@ export default function TabOneScreen() {
           </View>
         </TouchableOpacity>
           
-        <TouchableOpacity style={styles.profileButton}>
+        <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/auth/login')}>
           <Ionicons name="person" size={24} color="#4A4A4A" />
         </TouchableOpacity>
       </View>
@@ -196,9 +219,12 @@ export default function TabOneScreen() {
         
         {/* Welcome Message */}
         <View style={styles.welcomeSection}>
+          {isLoggedIn && currentUser ?(
           <Text style={styles.welcomeText}>
-            Welcome back, <Text style={styles.userName}>{userName}!</Text>
-          </Text>
+            Welcome back, <Text style={styles.userName}>{currentUser}!</Text>
+          </Text>) :  (
+            <Text style={styles.welcomeText}>Welcome back, Guest</Text>)
+            }
           <Text style={styles.dateText}>{currentDate}</Text>
         </View>
 
