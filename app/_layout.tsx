@@ -10,7 +10,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 
 export {
   // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+  ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -53,6 +53,28 @@ function RootLayoutNav() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen
+          name="auth/login"
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerTitle: '',
+            headerBackTitle: ' Back',
+            headerTintColor: '#007AFF',
+            headerTitleStyle: {color: '#000000'},
+          }}
+        />
+        <Stack.Screen
+          name="auth/signup"
+          options={{
+            headerShown: true,
+            headerTransparent: true,
+            headerTitle: '',
+            headerBackTitle: ' Back',
+            headerTintColor: '#007AFF',
+            headerTitleStyle: {color: '#000000'},
+          }}
+        />
       </Stack>
     </ThemeProvider>
   );
