@@ -295,12 +295,12 @@ const MyPantryScreen = () => {
   const [isGridView, setIsGridView] = useState(false);
 
 
-    useEffect(() => {
-    if (params.openModal === 'true') {
-      setModalVisible(true);
-      router.setParams({ openModal: undefined });
-    }
-  }, [params.openModal]);
+  // useEffect(() => {
+  //   if (params.openModal === 'true') {
+  //     setModalVisible(true);
+  //     router.setParams({ openModal: undefined });
+  //   }
+  // }, [params.openModal]);
 
   useEffect(() => {
     loadPantryItems()
