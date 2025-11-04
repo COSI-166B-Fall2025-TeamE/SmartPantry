@@ -13,6 +13,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import EditScreenInfo from '@/components/EditScreenInfo';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 // import { expirationItems } from '@/data/ItemsList';
 
@@ -78,6 +80,18 @@ export default function TabOneScreen() {
       console.error('Error loading items:', result.error);
     }
   };
+  
+  const [session, setSession] = useState<Session | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
   
 
   //const userNames = [
@@ -219,9 +233,9 @@ export default function TabOneScreen() {
         
         {/* Welcome Message */}
         <View style={styles.welcomeSection}>
-          {isLoggedIn && currentUser ?(
+          {session && session.user ?(
           <Text style={styles.welcomeText}>
-            Welcome back, <Text style={styles.userName}>{currentUser}!</Text>
+            Welcome back, <Text style={styles.userName}>{session.user.user_metadata.display_name}!</Text>
           </Text>) :  (
             <Text style={styles.welcomeText}>Welcome back, Guest</Text>)
             }

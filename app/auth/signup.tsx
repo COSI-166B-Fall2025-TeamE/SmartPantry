@@ -1,6 +1,8 @@
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { Session } from '@supabase/supabase-js';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import validatePassword from '../auth/passwordValidator';
 
@@ -65,10 +67,23 @@ export default function SignUpScreen() {
     }
   };
 
-  const handleSignup = () => {
-    console.log("Username:", username);
-    console.log("Email:", email);
-    console.log("Password:", password);
+
+  const [session, setSession] = useState<Session | null>(null)
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+
+  const [loading, setLoading] = useState(false)
+
+  const handleSignup = async () => {
+    setLoading(true)
     
     if (!validateUsername(username)) {
       Alert.alert(
@@ -100,6 +115,32 @@ export default function SignUpScreen() {
       return;
     }
     
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+      data: {
+          display_name: username,
+        }
+      }
+    })
+
+    if (error) Alert.alert(error.message)
+    if (!error) {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      })
+
+      if (error) Alert.alert(error.message)
+
+      router.push('/(tabs)');
+    } 
+    setLoading(false)
+
     // TODO: wait to replace with navigation back or success message
   };
 

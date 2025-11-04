@@ -1,60 +1,42 @@
-import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import validatePassword from '../auth/passwordValidator';
 
-import AsyncStorage from '@react-native-async-storage/async-storage'; //use  async storage to store user data before implement super base
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
+import { router } from 'expo-router';
+import 'react-native-url-polyfill/auto';
+import validatePassword from './passwordValidator';
+
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [usernameError, setUsernameError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [session, setSession] = useState<Session | null>(null)
 
   useEffect(() => {
-    checkLoginStatus();
-  }, []);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
 
-  const checkLoginStatus = async () => {
-    try {
-      const loggedIn = await AsyncStorage.getItem('loggedIn');
-      if (loggedIn === 'true') {
-        setIsLoggedIn(true);
-      }
-    } catch (error) {
-      console.log('Error checking login status:', error);
-    }
-  };
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
 
-  const validateUsername = (text: string) => {
-    // Check if the username is at most 20 characters long and contains only alphanumeric characters
-    if (text.length > 20) {
-      return false;
-    }
-    // Check  if the username contains only alphanumeric characters
-    const regex = /^[a-zA-Z0-9]+$/;
-    return regex.test(text);
-  };
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleUsernameChange = (text: string) => {
-    
-    // limit  username to 20 characters 
-    if (text.length <= 20) {
-      setUsername(text);
-    }
+  async function signInWithEmail() {
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    })
 
-    setUsernameError('');
-
-    // Check if text contains only alphanumeric characters
-    if (text.length > 0) {
-      const regex = /^[a-zA-Z0-9]*$/;
-      if (!regex.test(text)) {
-        setUsernameError('Username can only contain letters and numbers and on longer than 20 characters');
-      }
-    }
-  };
+    if (error) Alert.alert(error.message)
+    setLoading(false)
+  }
+  
+  const [passwordError, setPasswordError] = useState('');
 
   const handlePasswordChange = (text: string) => {
     setPassword(text);
@@ -69,53 +51,14 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLogin = async () => {
-    console.log("Username:", username);
-    console.log("Password:", password);
-
-    //  Validate username
-    if (!validateUsername(username)) {
-      Alert.alert(
-        'Invalid Username',
-        'Username must be less than 20 characters and contain only letters and numbers.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    // Validate password
-    const { isValid, errorMessage } = validatePassword(password);
-    if (!isValid) {
-      Alert.alert(
-        'Invalid Password',
-        errorMessage,
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    // TODO: wait to connect to superbase
-    try {
-      // Simulate login (replace this with database authentication later).
-      await AsyncStorage.setItem('user', username);
-      await AsyncStorage.setItem('loggedIn', 'true');
-      setIsLoggedIn(true); 
-      Alert.alert('Login successful', `Welcome back, ${username}!`, [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
-    } catch (error) {
-      Alert.alert('Error', 'Unable to save login data.');
-    }
-  };
 
   const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('loggedIn');
-      setIsLoggedIn(false); //handle status
-      setUsername(''); 
-      setPassword('');
-      Alert.alert('Logout Successful', 'You have been logged out.');
-    } catch (error) {
-      Alert.alert('Error', 'Unable to logout.');
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      console.error('Error logging out:', error.message)
+    } else {
+      console.log('Successfully logged out')
     }
   };
 
@@ -124,9 +67,9 @@ export default function LoginScreen() {
       <Text style={styles.title}>👤 Login</Text>
       
       {/* The logout button is only displayed when the user is logged in. */}
-      {isLoggedIn ? (
+      {session && session.user ? (
         <View style={styles.loggedInContainer}>
-          <Text style={styles.loggedInText}>User Name: {username}</Text>
+          <Text style={styles.loggedInText}>User Name: {session.user.user_metadata.display_name}</Text>
           <Text style={styles.loggedInText}>You are already logged in</Text>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutButtonText}>Logout</Text>
@@ -136,18 +79,11 @@ export default function LoginScreen() {
         <>
           <TextInput
             style={styles.input}
-            placeholder="Username"
-            value={username}
-            onChangeText={handleUsernameChange}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
             autoCapitalize="none"
-            maxLength={20}
           />
-
-          {usernameError ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{usernameError}</Text>
-            </View>
-          ) : null}
 
           <TextInput
             style={styles.input}
@@ -163,7 +99,7 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <TouchableOpacity style={styles.button} onPress={signInWithEmail}>
             <Text style={styles.buttonText}>Sign In</Text>
           </TouchableOpacity>
         </>
