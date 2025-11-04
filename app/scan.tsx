@@ -1,16 +1,16 @@
+import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { CameraView } from "expo-camera";
 import { Stack, router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
-  StyleSheet,
-  Alert,
   ActivityIndicator,
-  View,
+  Alert,
+  StyleSheet,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ScanQrOverlay from "./overlay";
-import { useState, useRef, useEffect } from "react";
-import Ionicons from '@expo/vector-icons/build/Ionicons';
 
 export default function Scan() {
   const [isLoading, setIsLoading] = useState(false);
