@@ -1,4 +1,6 @@
 import { Text, View } from '@/components/Themed';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { fetchAllData } from './DatabaseFunctions';
@@ -24,8 +26,21 @@ const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemP
     loadItems();
   }, []);
 
+
+  const [session, setSession] = useState<Session | null>(null)
+    
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+  
   const loadItems = async () => {
-    const result = await fetchAllData('expiration');
+    const result = await fetchAllData('expiration', session);
     setItems(result.data);
   };
   

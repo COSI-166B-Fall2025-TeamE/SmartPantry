@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 import React, { useEffect, useState } from 'react';
 import {
   FlatList,
@@ -30,7 +32,7 @@ export default function GroceryList() {
   const [suggestions, setExpirationSuggestions] = useState([]);
   
   const loadItemsnew = async (currentGroceryItems) => {
-    const result = await fetchAllData('expiration');
+    const result = await fetchAllData('expiration', session);
     if (result.success){
         //console.log('Expiration data from DB:', result.data);
         
@@ -73,12 +75,13 @@ export default function GroceryList() {
   }, [])
 
   const loadGroceryList = async () => {
-    const groceryResult = await fetchAllData('groceryList');
+    const groceryResult = await fetchAllData('groceryList', session);
+    console.log(session, "Grocery list")
     sortItems(groceryResult.data)
   };
   
   const loadItems = async (currentGroceryItems) => {
-    const result = await fetchAllData('expiration');
+    const result = await fetchAllData('expiration', session);
     if (result.success){
         const updatedItems = result.data.map((item) => {
           return {
@@ -100,13 +103,25 @@ export default function GroceryList() {
     }
   };
 
+  const [session, setSession] = useState<Session | null>(null)
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+  
   const addItem = async (text?: string) => {
     const itemText = text || inputText;
     if (itemText && itemText.trim()) {
       const newItem = { id: Date.now().toString(), text: itemText, completed: false };
       sortItems([...items, newItem]);
       setInputText('');
-      await insertData('groceryList', newItem);
+      await insertData('groceryList', newItem, session);
     }
   };
 

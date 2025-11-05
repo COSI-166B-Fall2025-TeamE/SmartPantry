@@ -1,9 +1,28 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, Session } from '@supabase/supabase-js';
 
 // Initialize Supabase client
 const supabaseUrl = "https://lmjsnvqjntyyorvmxyib.supabase.co"
 const supabaseKey = "sb_publishable_aeWD6oACdSDgfqi4csNVwA_FwYORzpU"
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+const ensureLoggedIn = async (session: Session) => {
+    
+    // const { data, error } = await supabase.auth.signInWithPassword({
+    //   email: 'rowan2@brandeis.edu',
+    //   password: 'Testing123!'
+    // });
+   
+    // if (error) {
+    //   console.error('Error signing in:', error.message);
+    // } else {
+    //   console.log('User:', data.user);
+    //   console.log('Session:', data.session);
+    // }
+    const { data: { user } } = await supabase.auth.getUser();
+    console.log('Current user:', user); // Should not be null
+
+}
+
 
 // ==================== RETRIEVE DATA ====================
 
@@ -12,16 +31,31 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  * @param tableName - Name of the table to query
  * @returns Object with success status and data or error
  */
-export const fetchAllData = async (tableName: string) => {
+export const fetchAllData = async (tableName: string, session: Session) => {
   try {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*');
-
-    if (error) throw error;
-
-    console.log(`Data fetched from ${tableName}`);
-    return { success: true, data };
+    await ensureLoggedIn(session)
+    
+    if (session && session.user){
+      console.log(session.user.user_metadata.sub)
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        // .eq('user_id', session.user.user_metadata.sub); 
+      if (error) throw error;
+      console.log(data)
+      console.log(`Data fetched from ${tableName}`);
+      return { success: true, data };
+    }
+    else {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .is('user_id', null); // Filter where 'user_id' is null;
+      if (error) throw error;
+      console.log(`Data fetched from ${tableName}`);
+      return { success: true, data };      
+    }
+    
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
     console.error(`Error fetching data from ${tableName}:`, err);
@@ -37,8 +71,10 @@ export const fetchAllData = async (tableName: string) => {
  * @param dataToInsert - Object or array of objects to insert
  * @returns Object with success status and inserted data or error
  */
-export const insertData = async (tableName: string, dataToInsert: any) => {
+export const insertData = async (tableName: string, dataToInsert: any, session: Session) => {
   try {
+    dataToInsert["user_id"] = session && session.user ? session.user.user_metadata.sub : null
+
     const { data, error } = await supabase
       .from(tableName)
       .insert([dataToInsert])

@@ -73,7 +73,7 @@ export default function TabOneScreen() {
   
 
   const loadItems = async () => {
-    const result = await fetchAllData('expiration');
+    const result = await fetchAllData('expiration', session);
     if (result.success) {
       setItems(result.data);
     } else {
@@ -197,7 +197,7 @@ export default function TabOneScreen() {
                     style={styles.sidebarItem}
                     onPress={async () => {
                       try {
-                        const storedItems = await fetchAllData('groceryList');
+                        const storedItems = await fetchAllData('groceryList', session);
                         if (storedItems.data) {
                           const items = storedItems.data;
                           const itemsList = items.map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`).join('\n');

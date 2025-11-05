@@ -1,7 +1,9 @@
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import ExpirationItems from '@/components/ExpirationItems';
 import { Text, View } from '@/components/Themed';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { Session } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import { Calendar } from 'react-native-calendars';
@@ -52,8 +54,20 @@ export default function ExpirationTabScreen() {
   }, [expirationItems]);
 
 
+  const [session, setSession] = useState<Session | null>(null)
+    
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+  
   const loadItems = async () => {
-    const result = await fetchAllData('expiration');
+    const result = await fetchAllData('expiration', session);
     setItems(result.data);
   };
 

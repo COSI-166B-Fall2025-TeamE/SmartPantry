@@ -1,6 +1,8 @@
 import { deleteById, fetchAllData, insertData } from '@/components/DatabaseFunctions';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Session } from '@supabase/supabase-js';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -302,12 +304,12 @@ const MyPantryScreen = () => {
   //   }
   // }, [params.openModal]);
 
-  useEffect(() => {
-    loadPantryItems()
-  }, [])
+  // useEffect(() => {
+    
+  // }, [])
 
   const loadPantryItems = async () => {
-    const pantryResult = await fetchAllData('expiration');
+    const pantryResult = await fetchAllData('expiration', session);
     setPantryItems(pantryResult.data)
   };
 
@@ -315,11 +317,27 @@ const MyPantryScreen = () => {
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const [session, setSession] = useState<Session | null>(null)
+
+  useEffect(() => {
+    loadPantryItems()
+  }, [session])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+
+
   const addItem = async () => {
     if (newItemName && newItemQuantity && newDate) {
       const newDateString = newDate.toISOString().substring(0, 10);
       
-      console.log(newDate)
       const newItem = {
         id: Date.now().toString(),
         name: newItemName,
@@ -330,7 +348,7 @@ const MyPantryScreen = () => {
       // const newItem = { id: Date.now().toString(), text: itemText, completed: false };
       // sortItems([...items, newItem]);
       // setInputText('');
-      await insertData('expiration', newItem);
+      await insertData('expiration', newItem, session);
       setPantryItems([...pantryItems, newItem]);
       setNewItemName('');
       setNewItemQuantity('');
