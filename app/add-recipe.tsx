@@ -1,0 +1,583 @@
+import { useState, useEffect } from 'react';
+import { useColorScheme } from 'react-native';
+import { 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  TextInput, 
+  View as RNView, 
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Image
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text, View } from '@/components/Themed';
+import Colors from '@/constants/templateColors';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { 
+  saveCustomRecipe, 
+  updateCustomRecipe, 
+  getCustomRecipe,
+  CustomRecipe 
+} from '@/lib/utils/customRecipesStorage';
+
+interface IngredientInput {
+  ingredient: string;
+  measure: string;
+}
+
+const CATEGORIES = ['Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
+
+export default function AddRecipeScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
+  const router = useRouter();
+  const { id } = useLocalSearchParams(); // For editing existing recipe
+  
+  const [recipeName, setRecipeName] = useState('');
+  const [category, setCategory] = useState('Miscellaneous');
+  const [area, setArea] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [ingredients, setIngredients] = useState<IngredientInput[]>([{ ingredient: '', measure: '' }]);
+  const [tags, setTags] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [imageUri, setImageUri] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (id && typeof id === 'string') {
+      loadRecipeForEditing(id);
+    }
+  }, [id]);
+
+  const loadRecipeForEditing = async (recipeId: string) => {
+    const recipe = await getCustomRecipe(recipeId);
+    if (recipe) {
+      setIsEditing(true);
+      setRecipeName(recipe.strMeal);
+      setCategory(recipe.strCategory);
+      setArea(recipe.strArea);
+      setInstructions(recipe.strInstructions);
+      setIngredients(recipe.ingredients.length > 0 ? recipe.ingredients : [{ ingredient: '', measure: '' }]);
+      setTags(recipe.strTags || '');
+      setYoutubeUrl(recipe.strYoutube || '');
+      setSourceUrl(recipe.strSource || '');
+      setImageUri(recipe.strMealThumb);
+    }
+  };
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant permission to access your photos');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const addIngredient = () => {
+    setIngredients([...ingredients, { ingredient: '', measure: '' }]);
+  };
+
+  const removeIngredient = (index: number) => {
+    if (ingredients.length > 1) {
+      const newIngredients = ingredients.filter((_, i) => i !== index);
+      setIngredients(newIngredients);
+    }
+  };
+
+  const updateIngredient = (index: number, field: 'ingredient' | 'measure', value: string) => {
+    const newIngredients = [...ingredients];
+    newIngredients[index][field] = value;
+    setIngredients(newIngredients);
+  };
+
+  const validateForm = (): boolean => {
+    if (!recipeName.trim()) {
+      Alert.alert('Error', 'Please enter a recipe name');
+      return false;
+    }
+    if (!area.trim()) {
+      Alert.alert('Error', 'Please enter the cuisine/area');
+      return false;
+    }
+    if (!instructions.trim()) {
+      Alert.alert('Error', 'Please enter cooking instructions');
+      return false;
+    }
+    if (!imageUri) {
+      Alert.alert('Error', 'Please select an image for your recipe');
+      return false;
+    }
+    
+    const validIngredients = ingredients.filter(ing => ing.ingredient.trim());
+    if (validIngredients.length === 0) {
+      Alert.alert('Error', 'Please add at least one ingredient');
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setLoading(true);
+    try {
+      const validIngredients = ingredients
+        .filter(ing => ing.ingredient.trim())
+        .map(ing => ({
+          ingredient: ing.ingredient.trim(),
+          measure: ing.measure.trim(),
+        }));
+
+      const recipeData = {
+        strMeal: recipeName.trim(),
+        strCategory: category,
+        strArea: area.trim(),
+        strInstructions: instructions.trim(),
+        strMealThumb: imageUri,
+        strTags: tags.trim() || null,
+        strYoutube: youtubeUrl.trim(),
+        strSource: sourceUrl.trim() || null,
+        ingredients: validIngredients,
+      };
+
+      if (isEditing && id) {
+        await updateCustomRecipe(id as string, recipeData);
+        Alert.alert('Success', 'Recipe updated successfully!');
+      } else {
+        await saveCustomRecipe(recipeData);
+        Alert.alert('Success', 'Recipe saved successfully!');
+      }
+      
+      router.back();
+    } catch (error) {
+      console.error('Error saving recipe:', error);
+      Alert.alert('Error', 'Failed to save recipe. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Stack.Screen 
+        options={{ 
+          headerShown: false,
+          presentation: 'modal',
+          gestureEnabled: true,
+        }} 
+      />
+      <SafeAreaView 
+        style={[
+          styles.safeArea, 
+          { backgroundColor: colors.background }
+        ]} 
+        edges={['top', 'left', 'right']}
+      >
+        <KeyboardAvoidingView 
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {/* Header */}
+          <View style={[styles.header, { backgroundColor: colors.background }]}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => router.back()}
+            >
+              <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>{isEditing ? 'Edit Recipe' : 'Add Recipe'}</Text>
+            <TouchableOpacity 
+              style={styles.saveButton}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              <Text style={[styles.saveButtonText, { color: colors.buttonBackground }]}>
+                {loading ? 'Saving...' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={[styles.form, { backgroundColor: colors.background }]}>
+              {/* Image Picker */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Recipe Image *</Text>
+                <TouchableOpacity 
+                  style={[styles.imagePicker, { borderColor: colors.text }]}
+                  onPress={pickImage}
+                >
+                  {imageUri ? (
+                    <Image source={{ uri: imageUri }} style={styles.selectedImage} />
+                  ) : (
+                    <RNView style={styles.imagePickerPlaceholder}>
+                      <Ionicons name="camera" size={40} color={colors.text} style={{ opacity: 0.5 }} />
+                      <Text style={styles.imagePickerText}>Tap to select image</Text>
+                    </RNView>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Recipe Name */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Recipe Name *</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.searchBar,
+                      color: colors.text,
+                      borderColor: colors.text
+                    }
+                  ]}
+                  placeholder="e.g., Spaghetti Carbonara"
+                  placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                  value={recipeName}
+                  onChangeText={setRecipeName}
+                />
+              </View>
+
+              {/* Category */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Category *</Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.categoryScroll}
+                >
+                  {CATEGORIES.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.categoryChip,
+                        {
+                          backgroundColor: category === cat 
+                            ? colors.buttonBackground 
+                            : (colorScheme === 'dark' ? '#4A4E6B' : '#CDD0E3')
+                        }
+                      ]}
+                      onPress={() => setCategory(cat)}
+                    >
+                      <Text style={[
+                        styles.categoryText,
+                        {
+                          color: category === cat 
+                            ? colors.buttonText 
+                            : (colorScheme === 'dark' ? '#fff' : '#371B34')
+                        }
+                      ]}>
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Cuisine/Area */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Cuisine/Area *</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.searchBar,
+                      color: colors.text,
+                      borderColor: colors.text
+                    }
+                  ]}
+                  placeholder="e.g., Italian, Mexican, Chinese"
+                  placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                  value={area}
+                  onChangeText={setArea}
+                />
+              </View>
+
+              {/* Ingredients */}
+              <View style={styles.section}>
+                <RNView style={styles.labelRow}>
+                  <Text style={styles.label}>Ingredients *</Text>
+                  <TouchableOpacity onPress={addIngredient}>
+                    <Ionicons name="add-circle" size={24} color={colors.buttonBackground} />
+                  </TouchableOpacity>
+                </RNView>
+                
+                {ingredients.map((ingredient, index) => (
+                  <RNView key={index} style={styles.ingredientRow}>
+                    <TextInput
+                      style={[
+                        styles.ingredientInput,
+                        { 
+                          backgroundColor: colors.searchBar,
+                          color: colors.text,
+                          borderColor: colors.text,
+                          flex: 2
+                        }
+                      ]}
+                      placeholder="Ingredient"
+                      placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                      value={ingredient.ingredient}
+                      onChangeText={(text) => updateIngredient(index, 'ingredient', text)}
+                    />
+                    <TextInput
+                      style={[
+                        styles.ingredientInput,
+                        { 
+                          backgroundColor: colors.searchBar,
+                          color: colors.text,
+                          borderColor: colors.text,
+                          flex: 1
+                        }
+                      ]}
+                      placeholder="Amount"
+                      placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                      value={ingredient.measure}
+                      onChangeText={(text) => updateIngredient(index, 'measure', text)}
+                    />
+                    {ingredients.length > 1 && (
+                      <TouchableOpacity 
+                        onPress={() => removeIngredient(index)}
+                        style={styles.removeButton}
+                      >
+                        <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                      </TouchableOpacity>
+                    )}
+                  </RNView>
+                ))}
+              </View>
+
+              {/* Instructions */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Cooking Instructions *</Text>
+                <TextInput
+                  style={[
+                    styles.textArea,
+                    { 
+                      backgroundColor: colors.searchBar,
+                      color: colors.text,
+                      borderColor: colors.text
+                    }
+                  ]}
+                  placeholder="Enter step-by-step cooking instructions..."
+                  placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                  value={instructions}
+                  onChangeText={setInstructions}
+                  multiline
+                  numberOfLines={8}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Tags (Optional) */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Tags (Optional)</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.searchBar,
+                      color: colors.text,
+                      borderColor: colors.text
+                    }
+                  ]}
+                  placeholder="e.g., Quick, Easy, Healthy (comma separated)"
+                  placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                  value={tags}
+                  onChangeText={setTags}
+                />
+              </View>
+
+              {/* YouTube URL (Optional) */}
+              <View style={styles.section}>
+                <Text style={styles.label}>YouTube Video URL (Optional)</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.searchBar,
+                      color: colors.text,
+                      borderColor: colors.text
+                    }
+                  ]}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                  value={youtubeUrl}
+                  onChangeText={setYoutubeUrl}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              {/* Source URL (Optional) */}
+              <View style={styles.section}>
+                <Text style={styles.label}>Source URL (Optional)</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: colors.searchBar,
+                      color: colors.text,
+                      borderColor: colors.text
+                    }
+                  ]}
+                  placeholder="https://..."
+                  placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+                  value={sourceUrl}
+                  onChangeText={setSourceUrl}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <RNView style={{ height: 40 }} />
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  cancelButton: {
+    paddingVertical: 5,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  saveButton: {
+    paddingVertical: 5,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  form: {
+    padding: 20,
+  },
+  section: {
+    marginBottom: 25,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: 'transparent',
+  },
+  input: {
+    height: 50,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    borderWidth: 1,
+  },
+  textArea: {
+    minHeight: 150,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingTop: 15,
+    fontSize: 16,
+    borderWidth: 1,
+  },
+  imagePicker: {
+    height: 200,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+  },
+  imagePickerPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  imagePickerText: {
+    marginTop: 10,
+    fontSize: 14,
+    opacity: 0.6,
+  },
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  categoryScroll: {
+    flexGrow: 0,
+  },
+  categoryChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ingredientRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  ingredientInput: {
+    height: 45,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    borderWidth: 1,
+  },
+  removeButton: {
+    padding: 5,
+  },
+});
