@@ -5,7 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
 import { useRouter } from 'expo-router';
-
+import { Ionicons } from '@expo/vector-icons';
+import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
+import { Href } from 'expo-router';
 
 interface Recipe {
   idMeal: string;
@@ -27,9 +29,7 @@ interface Recipe {
   dateModified: string | null;
 }
 
-
 const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
-
 
 export default function RecipeTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -39,13 +39,25 @@ export default function RecipeTabScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [favoriteStates, setFavoriteStates] = useState<{ [key: string]: boolean }>({});
 
   // Fetch recipes from TheMealDB API
   useEffect(() => {
     fetchRecipes();
   }, [selectedCategory]);
 
+  // Load favorite states for current recipes
+  useEffect(() => {
+    loadFavoriteStates();
+  }, [recipes]);
+
+  const loadFavoriteStates = async () => {
+    const states: { [key: string]: boolean } = {};
+    for (const recipe of recipes) {
+      states[recipe.idMeal] = await isFavorite(recipe.idMeal);
+    }
+    setFavoriteStates(states);
+  };
 
   const fetchRecipes = async () => {
     setLoading(true);
@@ -100,7 +112,6 @@ export default function RecipeTabScreen() {
     }
   };
 
-
   const formatRecipe = (meal: any): Recipe => {
     // Extract ingredients and measures from the meal object
     const ingredients = [];
@@ -116,7 +127,6 @@ export default function RecipeTabScreen() {
         });
       }
     }
-
 
     return {
       idMeal: meal.idMeal,
@@ -135,7 +145,6 @@ export default function RecipeTabScreen() {
       dateModified: meal.dateModified,
     };
   };
-
 
   // Search recipes by name AND ingredient simultaneously
   const handleSearch = async (query: string) => {
@@ -197,7 +206,6 @@ export default function RecipeTabScreen() {
     }
   };
 
-
   // Debounce search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -206,10 +214,8 @@ export default function RecipeTabScreen() {
       }
     }, 500);
 
-
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
-
 
   // Filter recipes locally for shorter queries
   const displayedRecipes = searchQuery.length > 0 && searchQuery.length < 3
@@ -221,6 +227,29 @@ export default function RecipeTabScreen() {
       )
     : recipes;
 
+  // Handle favorite toggle
+  const handleFavoriteToggle = async (recipe: Recipe, event: any) => {
+    event.stopPropagation(); // Prevent navigation when tapping heart
+    
+    try {
+      const favoriteRecipe: FavoriteRecipe = {
+        idMeal: recipe.idMeal,
+        strMeal: recipe.strMeal,
+        strMealThumb: recipe.strMealThumb,
+        strCategory: recipe.strCategory,
+        strArea: recipe.strArea,
+      };
+      
+      const newFavoriteState = await toggleFavorite(favoriteRecipe);
+      
+      setFavoriteStates(prev => ({
+        ...prev,
+        [recipe.idMeal]: newFavoriteState
+      }));
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   return (
     <SafeAreaView 
@@ -234,6 +263,20 @@ export default function RecipeTabScreen() {
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text style={styles.title}>Recipe Recommendations</Text>
           <Text style={styles.subtitle}>Discover delicious meals</Text>
+          
+          {/* Favorites Button */}
+          <TouchableOpacity 
+            style={[
+              styles.favoritesButton,
+              { backgroundColor: colors.buttonBackground }
+            ]}
+            onPress={() => router.push('/favorites' as Href)}
+          >
+            <Ionicons name="heart" size={20} color={colors.buttonText} />
+            <Text style={[styles.favoritesButtonText, { color: colors.buttonText }]}>
+              My Favorites
+            </Text>
+          </TouchableOpacity>
         </View>
         
         {/* Search Bar */}
@@ -300,7 +343,6 @@ export default function RecipeTabScreen() {
           ))}
         </ScrollView>
 
-
         {/* Recipe List */}
         {loading ? (
           <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -324,6 +366,18 @@ export default function RecipeTabScreen() {
                           style={styles.recipeImage}
                           resizeMode="cover"
                         />
+                        
+                        {/* Heart Button on Card */}
+                        <TouchableOpacity
+                          style={styles.heartButton}
+                          onPress={(e) => handleFavoriteToggle(recipe, e)}
+                        >
+                          <Ionicons 
+                            name={favoriteStates[recipe.idMeal] ? "heart" : "heart-outline"} 
+                            size={24} 
+                            color={favoriteStates[recipe.idMeal] ? "#FF3B30" : "#fff"} 
+                          />
+                        </TouchableOpacity>
                       </View>
                       
                       <View style={[
@@ -372,7 +426,6 @@ export default function RecipeTabScreen() {
   );
 }
 
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -393,6 +446,19 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     opacity: 0.6,
+    marginBottom: 10,
+  },
+  favoritesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 8,
+  },
+  favoritesButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   searchContainer: {
     marginHorizontal: 15,
@@ -471,10 +537,22 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     overflow: 'hidden',
+    position: 'relative',
   },
   recipeImage: {
     width: '100%',
     height: '100%',
+  },
+  heartButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   recipeInfo: {
     padding: 15,

@@ -5,7 +5,7 @@ import { StyleSheet, ScrollView, TouchableOpacity, View as RNView, ActivityIndic
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { Ionicons } from '@expo/vector-icons';
-
+import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 
 interface Recipe {
   idMeal: string;
@@ -27,7 +27,6 @@ interface Recipe {
   dateModified: string | null;
 }
 
-
 export default function RecipeDetailScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
@@ -37,7 +36,7 @@ export default function RecipeDetailScreen() {
   const [isYoutubeValid, setIsYoutubeValid] = useState(false);
   const [isSourceValid, setIsSourceValid] = useState(false);
   const [checkingLinks, setCheckingLinks] = useState(false);
-
+  const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -45,14 +44,39 @@ export default function RecipeDetailScreen() {
     }
   }, [id]);
 
-
   // Validate URLs when recipe is loaded
   useEffect(() => {
     if (recipe) {
       validateLinks();
+      checkFavoriteStatus();
     }
   }, [recipe]);
 
+  const checkFavoriteStatus = async () => {
+    if (recipe) {
+      const favoriteStatus = await isFavorite(recipe.idMeal);
+      setIsFavorited(favoriteStatus);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (!recipe) return;
+    
+    try {
+      const favoriteRecipe: FavoriteRecipe = {
+        idMeal: recipe.idMeal,
+        strMeal: recipe.strMeal,
+        strMealThumb: recipe.strMealThumb,
+        strCategory: recipe.strCategory,
+        strArea: recipe.strArea,
+      };
+      
+      const newFavoriteState = await toggleFavorite(favoriteRecipe);
+      setIsFavorited(newFavoriteState);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   const validateLinks = async () => {
     setCheckingLinks(true);
@@ -72,13 +96,11 @@ export default function RecipeDetailScreen() {
     setCheckingLinks(false);
   };
 
-
   const checkUrlValidity = async (url: string): Promise<boolean> => {
     // First, validate URL format
     if (!isValidUrlFormat(url)) {
       return false;
     }
-
 
     // Check if URL can be opened (this works for deep links and external URLs)
     try {
@@ -91,19 +113,16 @@ export default function RecipeDetailScreen() {
       return false;
     }
 
-
     // For http/https URLs, attempt a HEAD request to verify the link works
     if (url.startsWith('http://') || url.startsWith('https://')) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-
         const response = await fetch(url, {
           method: 'HEAD',
           signal: controller.signal,
         });
-
 
         clearTimeout(timeoutId);
         return response.ok; // Returns true if status is 200-299
@@ -116,10 +135,8 @@ export default function RecipeDetailScreen() {
       }
     }
 
-
     return true;
   };
-
 
   const isValidUrlFormat = (string: string): boolean => {
     try {
@@ -129,7 +146,6 @@ export default function RecipeDetailScreen() {
       return false;
     }
   };
-
 
   const fetchRecipeDetails = async () => {
     setLoading(true);
@@ -148,7 +164,6 @@ export default function RecipeDetailScreen() {
     }
   };
 
-
   const formatRecipe = (meal: any): Recipe => {
     const ingredients = [];
     for (let i = 1; i <= 20; i++) {
@@ -162,7 +177,6 @@ export default function RecipeDetailScreen() {
         });
       }
     }
-
 
     return {
       idMeal: meal.idMeal,
@@ -182,13 +196,11 @@ export default function RecipeDetailScreen() {
     };
   };
 
-
   const openYouTube = () => {
     if (recipe?.strYoutube && isYoutubeValid) {
       Linking.openURL(recipe.strYoutube);
     }
   };
-
 
   const openSource = () => {
     if (recipe?.strSource && isSourceValid) {
@@ -196,12 +208,10 @@ export default function RecipeDetailScreen() {
     }
   };
 
-
   const getTags = (strTags: string | null): string[] => {
     if (!strTags) return [];
     return strTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
   };
-
 
   if (loading) {
     return (
@@ -222,7 +232,6 @@ export default function RecipeDetailScreen() {
       </>
     );
   }
-
 
   if (!recipe) {
     return (
@@ -246,9 +255,7 @@ export default function RecipeDetailScreen() {
     );
   }
 
-
   const tags = getTags(recipe.strTags);
-
 
   return (
     <>
@@ -261,15 +268,20 @@ export default function RecipeDetailScreen() {
         edges={['top', 'left', 'right']}
       >
         <View style={styles.container}>
-          {/* Header with Back Button */}
+          {/* Header with Back Button and Favorite Button */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color={colorScheme === 'dark' ? '#fff' : '#000'} />
             </TouchableOpacity>
             <Text style={styles.headerTitle} numberOfLines={1}>Recipe</Text>
-            <View style={styles.placeholder} />
+            <TouchableOpacity style={styles.favoriteIconButton} onPress={handleFavoriteToggle}>
+              <Ionicons 
+                name={isFavorited ? "heart" : "heart-outline"} 
+                size={24} 
+                color={isFavorited ? "#FF3B30" : (colorScheme === 'dark' ? '#fff' : '#000')} 
+              />
+            </TouchableOpacity>
           </View>
-
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             {/* Recipe Image */}
@@ -279,11 +291,9 @@ export default function RecipeDetailScreen() {
               resizeMode="cover"
             />
 
-
             {/* Recipe Info */}
             <View style={styles.contentContainer}>
               <Text style={styles.recipeName}>{recipe.strMeal}</Text>
-
 
               {/* Category and Area */}
               <RNView style={styles.metaContainer}>
@@ -298,7 +308,6 @@ export default function RecipeDetailScreen() {
                 </RNView>
               </RNView>
 
-
               {/* Tags */}
               {tags.length > 0 && (
                 <RNView style={styles.tagsContainer}>
@@ -309,7 +318,6 @@ export default function RecipeDetailScreen() {
                   ))}
                 </RNView>
               )}
-
 
               {/* Action Buttons */}
               <RNView style={styles.actionButtons}>
@@ -362,7 +370,6 @@ export default function RecipeDetailScreen() {
                 )}
               </RNView>
 
-
               {/* Ingredients Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Ingredients</Text>
@@ -378,7 +385,6 @@ export default function RecipeDetailScreen() {
                 </View>
               </View>
 
-
               {/* Instructions Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Instructions</Text>
@@ -391,7 +397,6 @@ export default function RecipeDetailScreen() {
     </>
   );
 }
-
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -410,6 +415,12 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(128, 128, 128, 0.2)',
   },
   backIconButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  favoriteIconButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
