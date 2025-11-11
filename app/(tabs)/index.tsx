@@ -4,7 +4,7 @@ import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
-import { Link, router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -143,8 +143,16 @@ export default function TabOneScreen() {
             onPress={() => setIsSidebarVisible(false)}
             activeOpacity={1}
           >
-            <View style={[styles.sidebar, { backgroundColor: colors.card }]} onStartShouldSetResponder={() => true}>
-              <View style={[styles.sidebarHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <View 
+              style={[styles.sidebar, { backgroundColor: colors.card }]} 
+              onStartShouldSetResponder={() => true}
+            >
+              <View 
+                style={[
+                  styles.sidebarHeader, 
+                  { backgroundColor: colors.card, borderBottomColor: colors.border }
+                ]}
+              >
                 <Text style={[styles.sidebarTitle, { color: colors.text }]}>Menu</Text>
                 <TouchableOpacity 
                   style={styles.sidebarCloseButton}
@@ -153,33 +161,30 @@ export default function TabOneScreen() {
                   <Text style={[styles.sidebarCloseText, { color: colors.text }]}>×</Text>
                 </TouchableOpacity>
               </View>
-              
-              <View style={styles.sidebarContent}>
+
+              <View 
+                style={[
+                  styles.sidebarContent, 
+                  { backgroundColor: colors.card }
+                ]}
+              >
+                {/* Instructions */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
                   onPress={() => setIsSidebarVisible(false)}
                 >
-                  <Text style={[styles.sidebarItemText, { color: colors.text }]}>Home</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="book-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Instructions</Text>
+                  </View>
                 </TouchableOpacity>
-                
-                <Link href="/expiration" asChild>
-                  <TouchableOpacity 
-                    style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                    onPress={() => setIsSidebarVisible(false)}
-                  >
-                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Expiration Dates</Text>
-                  </TouchableOpacity>
-                </Link>
-                
-                <Link href="/grocery" asChild>
-                  <TouchableOpacity 
-                    style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                    onPress={() => setIsSidebarVisible(false)}
-                  >
-                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Grocery List</Text>
-                  </TouchableOpacity>
-                </Link>
-                
+
+                {/* Shopping List */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
                   onPress={async () => {
@@ -187,7 +192,9 @@ export default function TabOneScreen() {
                       const storedItems = await fetchAllData('groceryList');
                       if (storedItems.data) {
                         const items = storedItems.data;
-                        const itemsList = items.map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`).join('\n');
+                        const itemsList = items
+                          .map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`)
+                          .join('\n');
                         alert(`Grocery List:\n\n${itemsList || 'No items'}`);
                       } else {
                         alert('Grocery list is empty');
@@ -198,20 +205,47 @@ export default function TabOneScreen() {
                     setIsSidebarVisible(false);
                   }}
                 >
-                  <Text style={[styles.sidebarItemText, { color: colors.text }]}>Show current shopping list</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor: colors.expiringCard}}>
+                  <Ionicons 
+                    name="cart-outline" 
+                    size={20} 
+                    color={colors.text}
+                    style={{ marginRight: 15 }}
+                  />
+                  <Text style={[styles.sidebarItemText, { color: colors.text }]}>Shopping List</Text>
+                </View>
                 </TouchableOpacity>
 
-                <Link href="/recipe" asChild>
-                  <TouchableOpacity 
-                    style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                    onPress={() => setIsSidebarVisible(false)}
-                  >
-                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Recipes</Text>
-                  </TouchableOpacity>
-                </Link>
-                
-                <TouchableOpacity style={[styles.sidebarItem, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.sidebarItemText, { color: colors.text }]}>Help</Text>
+                {/* About Us */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={() => setIsSidebarVisible(false)}
+                >
+                <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="people-outline" 
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>About Us</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Help */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={() => setIsSidebarVisible(false)}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="construct-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Help</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
@@ -628,20 +662,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     zIndex: 1000,
-    flex: 1,
   },
 
   sidebar: {
     position: 'absolute',
     top: 0,
     left: 0,
-    width: 280,
+    width: '80%',
+    maxWidth: 280,
     height: '100%',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
@@ -671,16 +702,21 @@ const styles = StyleSheet.create({
   },
 
   sidebarContent: {
-    padding: 10,
+    flex: 1,
   },
 
   sidebarItem: {
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
+    width: '100%',
+    //borderRadius: 8,
+    //marginVertical: 4,
+    //backgroundColor: 'transparent',
   },
 
   sidebarItemText: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '500',
   },
 });
