@@ -9,6 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 import { Href } from 'expo-router';
 import { fetchAllData } from '@/components/DatabaseFunctions';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 
 
@@ -30,6 +32,7 @@ interface Recipe {
   strImageSource: string | null;
   strCreativeCommonsConfirmed: string | null;
   dateModified: string | null;
+  matchedIngredients?: string[]; // Added to track which pantry items matched
 }
 
 interface PantryItem {
@@ -59,17 +62,23 @@ export default function RecipeTabScreen() {
   const [filterType, setFilterType] = useState<FilterType>('random');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
 
-  // Fetch pantry items on mount
-  useEffect(() => {
-    loadPantryItems();
-  }, []);
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Recipe screen focused - refreshing data');
+      loadPantryItems();
+      setRefreshTrigger(prev => prev + 1);
+    }, [])
+  );
 
   const loadPantryItems = async () => {
     const pantryResult = await fetchAllData('expiration');
     setPantryItems(pantryResult.data || []);
+    console.log('Pantry items loaded:', pantryResult.data?.length || 0);
   };
 
   // Get expiring items (within 7 days)
@@ -89,7 +98,7 @@ export default function RecipeTabScreen() {
   // Fetch recipes from TheMealDB API
   useEffect(() => {
     fetchRecipes();
-  }, [selectedCategory, filterType]);
+  }, [selectedCategory, filterType, refreshTrigger]);
 
 
 
@@ -196,18 +205,35 @@ export default function RecipeTabScreen() {
           
           const formattedRecipes = detailedMeals
             .filter(result => result.meals && result.meals[0])
-            .map(result => formatRecipe(result.meals[0]));
+            .map(result => {
+              const recipe = formatRecipe(result.meals[0]);
+              // Mark this recipe with the matched ingredient
+              recipe.matchedIngredients = [item.name];
+              return recipe;
+            });
           
           allRecipes.push(...formattedRecipes);
         }
       }
       
-      // Remove duplicates based on idMeal
-      const uniqueRecipes = Array.from(
-        new Map(allRecipes.map(recipe => [recipe.idMeal, recipe])).values()
-      );
+      // Remove duplicates and combine matched ingredients
+      const recipeMap = new Map<string, Recipe>();
+      allRecipes.forEach(recipe => {
+        if (recipeMap.has(recipe.idMeal)) {
+          // Recipe already exists, add matched ingredient
+          const existing = recipeMap.get(recipe.idMeal)!;
+          if (recipe.matchedIngredients) {
+            existing.matchedIngredients = [
+              ...(existing.matchedIngredients || []),
+              ...recipe.matchedIngredients
+            ];
+          }
+        } else {
+          recipeMap.set(recipe.idMeal, recipe);
+        }
+      });
       
-      setRecipes(uniqueRecipes);
+      setRecipes(Array.from(recipeMap.values()));
     } catch (error) {
       console.error('Error fetching recipes by pantry items:', error);
       setRecipes([]);
@@ -597,14 +623,31 @@ export default function RecipeTabScreen() {
                             <Text style={[styles.detailText, { color: colors.text }]}>{recipe.strArea}</Text>
                           </RNView>
                           
-                          <RNView style={[
-                            styles.categoryBadge,
-                            { backgroundColor: colorScheme === 'dark' ? '#146ef5' : 'rgba(0, 122, 255, 0.1)' }
-                          ]}>
-                            <Text style={[
-                              styles.categoryBadgeText,
-                              { color: colorScheme === 'dark' ? '#fff' : '#007AFF' }
-                            ]}>{recipe.strCategory}</Text>
+                          <RNView style={styles.badgesContainer}>
+                            <RNView style={[
+                              styles.categoryBadge,
+                              { backgroundColor: colorScheme === 'dark' ? '#146ef5' : 'rgba(0, 122, 255, 0.1)' }
+                            ]}>
+                              <Text style={[
+                                styles.categoryBadgeText,
+                                { color: colorScheme === 'dark' ? '#fff' : '#007AFF' }
+                              ]}>{recipe.strCategory}</Text>
+                            </RNView>
+
+                            {/* Matched Ingredients Badges - Right next to category badge */}
+                            {recipe.matchedIngredients && recipe.matchedIngredients.length > 0 && (
+                              recipe.matchedIngredients.map((ingredient, index) => (
+                                <RNView 
+                                  key={`${recipe.idMeal}-${ingredient}-${index}`}
+                                  style={styles.matchedIngredientBadge}
+                                >
+                                  <Ionicons name="checkmark-circle" size={12} color="#fff" />
+                                  <Text style={styles.matchedIngredientText}>
+                                    {ingredient}
+                                  </Text>
+                                </RNView>
+                              ))
+                            )}
                           </RNView>
                         </RNView>
                       </View>
@@ -846,6 +889,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     opacity: 0.7,
   },
+  badgesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   categoryBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -853,6 +904,20 @@ const styles = StyleSheet.create({
   },
   categoryBadgeText: {
     fontSize: 12,
+    fontWeight: '600',
+  },
+  matchedIngredientBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  matchedIngredientText: {
+    color: '#fff',
+    fontSize: 11,
     fontWeight: '600',
   },
   emptyState: {
