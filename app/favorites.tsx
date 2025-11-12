@@ -8,6 +8,7 @@ import { useRouter, Stack, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getFavorites, removeFromFavorites, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 
+
 export default function FavoritesScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
@@ -15,12 +16,14 @@ export default function FavoritesScreen() {
   const [favorites, setFavorites] = useState<FavoriteRecipe[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+
   // Load favorites when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
     }, [])
   );
+
 
   const loadFavorites = async () => {
     try {
@@ -31,11 +34,13 @@ export default function FavoritesScreen() {
     }
   };
 
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadFavorites();
     setRefreshing(false);
   };
+
 
   const handleRemoveFavorite = async (recipeId: string) => {
     try {
@@ -45,6 +50,7 @@ export default function FavoritesScreen() {
       console.error('Error removing favorite:', error);
     }
   };
+
 
   return (
     <>
@@ -57,14 +63,18 @@ export default function FavoritesScreen() {
         edges={['top', 'left', 'right']}
       >
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-          {/* Header */}
+          {/* Header - Updated to match My Recipes */}
           <View style={[styles.header, { backgroundColor: colors.background }]}>
-            <TouchableOpacity style={styles.backIconButton} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color={colorScheme === 'dark' ? '#fff' : '#000'} />
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>My Favorites</Text>
+            <Text style={styles.title}>My Favorites</Text>
             <View style={styles.placeholder} />
           </View>
+
 
           {/* Favorites List */}
           {favorites.length > 0 ? (
@@ -143,7 +153,8 @@ export default function FavoritesScreen() {
               <Ionicons 
                 name="heart-outline" 
                 size={80} 
-                color={colorScheme === 'dark' ? '#4A4E6B' : '#CDD0E3'} 
+                color={colors.text}
+                style={{ opacity: 0.3 }}
               />
               <Text style={styles.emptyStateText}>No Favorites Yet</Text>
               <Text style={styles.emptyStateSubtext}>
@@ -165,6 +176,7 @@ export default function FavoritesScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -181,15 +193,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(128, 128, 128, 0.2)',
   },
-  backIconButton: {
+  backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
   },
@@ -276,21 +288,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    paddingHorizontal: 40,
   },
   emptyStateText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     marginTop: 20,
     marginBottom: 10,
-    opacity: 0.7,
+    opacity: 0.6,
   },
   emptyStateSubtext: {
-    fontSize: 16,
-    opacity: 0.5,
+    fontSize: 14,
+    opacity: 0.4,
     textAlign: 'center',
     marginBottom: 30,
-    lineHeight: 24,
   },
   browseButton: {
     paddingHorizontal: 30,

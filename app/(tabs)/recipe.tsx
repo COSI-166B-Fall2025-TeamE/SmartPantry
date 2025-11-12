@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 import { Href } from 'expo-router';
 
+
 interface Recipe {
   idMeal: string;
   strMeal: string;
@@ -29,7 +30,9 @@ interface Recipe {
   dateModified: string | null;
 }
 
+
 const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
+
 
 export default function RecipeTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -41,15 +44,18 @@ export default function RecipeTabScreen() {
   const [loading, setLoading] = useState(true);
   const [favoriteStates, setFavoriteStates] = useState<{ [key: string]: boolean }>({});
 
+
   // Fetch recipes from TheMealDB API
   useEffect(() => {
     fetchRecipes();
   }, [selectedCategory]);
 
+
   // Load favorite states for current recipes
   useEffect(() => {
     loadFavoriteStates();
   }, [recipes]);
+
 
   const loadFavoriteStates = async () => {
     const states: { [key: string]: boolean } = {};
@@ -58,6 +64,7 @@ export default function RecipeTabScreen() {
     }
     setFavoriteStates(states);
   };
+
 
   const fetchRecipes = async () => {
     setLoading(true);
@@ -112,6 +119,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   const formatRecipe = (meal: any): Recipe => {
     // Extract ingredients and measures from the meal object
     const ingredients = [];
@@ -127,6 +135,7 @@ export default function RecipeTabScreen() {
         });
       }
     }
+
 
     return {
       idMeal: meal.idMeal,
@@ -145,6 +154,7 @@ export default function RecipeTabScreen() {
       dateModified: meal.dateModified,
     };
   };
+
 
   // Search recipes by name AND ingredient simultaneously
   const handleSearch = async (query: string) => {
@@ -206,6 +216,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   // Debounce search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -214,8 +225,10 @@ export default function RecipeTabScreen() {
       }
     }, 500);
 
+
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
 
   // Filter recipes locally for shorter queries
   const displayedRecipes = searchQuery.length > 0 && searchQuery.length < 3
@@ -226,6 +239,7 @@ export default function RecipeTabScreen() {
         )
       )
     : recipes;
+
 
   // Handle favorite toggle
   const handleFavoriteToggle = async (recipe: Recipe, event: any) => {
@@ -251,6 +265,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   return (
     <SafeAreaView 
       style={[
@@ -264,19 +279,34 @@ export default function RecipeTabScreen() {
           <Text style={styles.title}>Recipe Recommendations</Text>
           <Text style={styles.subtitle}>Discover delicious meals</Text>
           
-          {/* Favorites Button */}
-          <TouchableOpacity 
-            style={[
-              styles.favoritesButton,
-              { backgroundColor: colors.buttonBackground }
-            ]}
-            onPress={() => router.push('/favorites' as Href)}
-          >
-            <Ionicons name="heart" size={20} color={colors.buttonText} />
-            <Text style={[styles.favoritesButtonText, { color: colors.buttonText }]}>
-              My Favorites
-            </Text>
-          </TouchableOpacity>
+          {/* Button Container */}
+          <RNView style={styles.headerButtonContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.headerButton,
+                { backgroundColor: colors.buttonBackground }
+              ]}
+              onPress={() => router.push('/favorites' as Href)}
+            >
+              <Ionicons name="heart" size={20} color={colors.buttonText} />
+              <Text style={[styles.headerButtonText, { color: colors.buttonText }]}>
+                My Favorites
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.headerButton,
+                { backgroundColor: colors.buttonBackground }
+              ]}
+              onPress={() => router.push('/my-recipes' as Href)}
+            >
+              <Ionicons name="restaurant" size={20} color={colors.buttonText} />
+              <Text style={[styles.headerButtonText, { color: colors.buttonText }]}>
+                My Recipes
+              </Text>
+            </TouchableOpacity>
+          </RNView>
         </View>
         
         {/* Search Bar */}
@@ -342,6 +372,7 @@ export default function RecipeTabScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
 
         {/* Recipe List */}
         {loading ? (
@@ -426,6 +457,7 @@ export default function RecipeTabScreen() {
   );
 }
 
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -448,15 +480,23 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     marginBottom: 10,
   },
-  favoritesButton: {
+  headerButtonContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 15,
+    backgroundColor: 'transparent',
+  },
+  headerButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 15,
     paddingVertical: 10,
     borderRadius: 20,
     gap: 8,
   },
-  favoritesButtonText: {
+  headerButtonText: {
     fontSize: 14,
     fontWeight: '600',
   },
