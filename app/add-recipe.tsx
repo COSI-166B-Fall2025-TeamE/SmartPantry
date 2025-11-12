@@ -35,7 +35,7 @@ export default function AddRecipeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
-  const { id } = useLocalSearchParams(); // For editing existing recipe
+  const params = useLocalSearchParams();
   
   const [recipeName, setRecipeName] = useState('');
   const [category, setCategory] = useState('Miscellaneous');
@@ -48,46 +48,57 @@ export default function AddRecipeScreen() {
   const [imageUri, setImageUri] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
-    if (id && typeof id === 'string') {
-      loadRecipeForEditing(id);
+    // Only run once when component mounts
+    if (!initialLoadDone && params.id && typeof params.id === 'string') {
+      loadRecipeForEditing(params.id);
+      setInitialLoadDone(true);
     }
-  }, [id]);
+  }, []); // Empty dependency array - only runs once
 
   const loadRecipeForEditing = async (recipeId: string) => {
-    const recipe = await getCustomRecipe(recipeId);
-    if (recipe) {
-      setIsEditing(true);
-      setRecipeName(recipe.strMeal);
-      setCategory(recipe.strCategory);
-      setArea(recipe.strArea);
-      setInstructions(recipe.strInstructions);
-      setIngredients(recipe.ingredients.length > 0 ? recipe.ingredients : [{ ingredient: '', measure: '' }]);
-      setTags(recipe.strTags || '');
-      setYoutubeUrl(recipe.strYoutube || '');
-      setSourceUrl(recipe.strSource || '');
-      setImageUri(recipe.strMealThumb);
+    try {
+      const recipe = await getCustomRecipe(recipeId);
+      if (recipe) {
+        setIsEditing(true);
+        setRecipeName(recipe.strMeal);
+        setCategory(recipe.strCategory);
+        setArea(recipe.strArea);
+        setInstructions(recipe.strInstructions);
+        setIngredients(recipe.ingredients.length > 0 ? recipe.ingredients : [{ ingredient: '', measure: '' }]);
+        setTags(recipe.strTags || '');
+        setYoutubeUrl(recipe.strYoutube || '');
+        setSourceUrl(recipe.strSource || '');
+        setImageUri(recipe.strMealThumb);
+      }
+    } catch (error) {
+      console.error('Error loading recipe:', error);
     }
   };
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant permission to access your photos');
-      return;
-    }
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant permission to access your photos');
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
     }
   };
 
@@ -121,10 +132,7 @@ export default function AddRecipeScreen() {
       Alert.alert('Error', 'Please enter cooking instructions');
       return false;
     }
-    if (!imageUri) {
-      Alert.alert('Error', 'Please select an image for your recipe');
-      return false;
-    }
+    // Image is now optional - removed validation
     
     const validIngredients = ingredients.filter(ing => ing.ingredient.trim());
     if (validIngredients.length === 0) {
@@ -147,20 +155,23 @@ export default function AddRecipeScreen() {
           measure: ing.measure.trim(),
         }));
 
+      // Use placeholder image if none selected
+      const finalImageUri = imageUri || 'https://via.placeholder.com/400x300/CDD0E3/371B34?text=No+Image';
+
       const recipeData = {
         strMeal: recipeName.trim(),
         strCategory: category,
         strArea: area.trim(),
         strInstructions: instructions.trim(),
-        strMealThumb: imageUri,
+        strMealThumb: finalImageUri,
         strTags: tags.trim() || null,
         strYoutube: youtubeUrl.trim(),
         strSource: sourceUrl.trim() || null,
         ingredients: validIngredients,
       };
 
-      if (isEditing && id) {
-        await updateCustomRecipe(id as string, recipeData);
+      if (isEditing && params.id) {
+        await updateCustomRecipe(params.id as string, recipeData);
         Alert.alert('Success', 'Recipe updated successfully!');
       } else {
         await saveCustomRecipe(recipeData);
@@ -181,8 +192,7 @@ export default function AddRecipeScreen() {
       <Stack.Screen 
         options={{ 
           headerShown: false,
-          presentation: 'modal',
-          gestureEnabled: true,
+          animation: 'slide_from_bottom',
         }} 
       />
       <SafeAreaView 
@@ -194,7 +204,8 @@ export default function AddRecipeScreen() {
       >
         <KeyboardAvoidingView 
           style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={0}
         >
           {/* Header */}
           <View style={[styles.header, { backgroundColor: colors.background }]}>
@@ -210,7 +221,7 @@ export default function AddRecipeScreen() {
               onPress={handleSave}
               disabled={loading}
             >
-              <Text style={[styles.saveButtonText, { color: colors.buttonBackground }]}>
+              <Text style={[styles.saveButtonText, { color: colors.buttonBackground, opacity: loading ? 0.5 : 1 }]}>
                 {loading ? 'Saving...' : 'Save'}
               </Text>
             </TouchableOpacity>
@@ -220,14 +231,16 @@ export default function AddRecipeScreen() {
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             <View style={[styles.form, { backgroundColor: colors.background }]}>
               {/* Image Picker */}
               <View style={styles.section}>
-                <Text style={styles.label}>Recipe Image *</Text>
+                <Text style={styles.label}>Recipe Image (Optional)</Text>
                 <TouchableOpacity 
                   style={[styles.imagePicker, { borderColor: colors.text }]}
                   onPress={pickImage}
+                  activeOpacity={0.8}
                 >
                   {imageUri ? (
                     <Image source={{ uri: imageUri }} style={styles.selectedImage} />
@@ -266,6 +279,7 @@ export default function AddRecipeScreen() {
                   horizontal 
                   showsHorizontalScrollIndicator={false}
                   style={styles.categoryScroll}
+                  nestedScrollEnabled={true}
                 >
                   {CATEGORIES.map((cat) => (
                     <TouchableOpacity
@@ -279,6 +293,7 @@ export default function AddRecipeScreen() {
                         }
                       ]}
                       onPress={() => setCategory(cat)}
+                      activeOpacity={0.7}
                     >
                       <Text style={[
                         styles.categoryText,
@@ -318,7 +333,7 @@ export default function AddRecipeScreen() {
               <View style={styles.section}>
                 <RNView style={styles.labelRow}>
                   <Text style={styles.label}>Ingredients *</Text>
-                  <TouchableOpacity onPress={addIngredient}>
+                  <TouchableOpacity onPress={addIngredient} activeOpacity={0.7}>
                     <Ionicons name="add-circle" size={24} color={colors.buttonBackground} />
                   </TouchableOpacity>
                 </RNView>
@@ -359,6 +374,7 @@ export default function AddRecipeScreen() {
                       <TouchableOpacity 
                         onPress={() => removeIngredient(index)}
                         style={styles.removeButton}
+                        activeOpacity={0.7}
                       >
                         <Ionicons name="close-circle" size={24} color="#FF3B30" />
                       </TouchableOpacity>

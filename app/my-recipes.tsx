@@ -75,15 +75,7 @@ export default function MyRecipesScreen() {
               <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.title}>My Recipes</Text>
-            <TouchableOpacity 
-              style={[
-                styles.addButton,
-                { backgroundColor: colors.buttonBackground }
-              ]}
-              onPress={() => router.push('/add-recipe' as Href)}
-            >
-              <Ionicons name="add" size={24} color={colors.buttonText} />
-            </TouchableOpacity>
+            <View style={styles.placeholder} />
           </View>
 
           {/* Recipe List */}
@@ -104,14 +96,6 @@ export default function MyRecipesScreen() {
               <Text style={styles.emptyStateSubtext}>
                 Tap the + button to add your first recipe
               </Text>
-              <TouchableOpacity 
-                style={[styles.addFirstButton, { backgroundColor: colors.buttonBackground }]}
-                onPress={() => router.push('/add-recipe' as Href)}
-              >
-                <Text style={[styles.addFirstButtonText, { color: colors.buttonText }]}>
-                  Add Your First Recipe
-                </Text>
-              </TouchableOpacity>
             </View>
           ) : (
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -183,6 +167,17 @@ export default function MyRecipesScreen() {
               </View>
             </ScrollView>
           )}
+
+          {/* Floating Add Button */}
+          <TouchableOpacity
+            style={[
+              styles.floatingAddButton,
+              { backgroundColor: colors.buttonBackground }
+            ]}
+            onPress={() => router.push('/add-recipe' as Href)}
+          >
+            <Ionicons name="add" size={28} color={colors.buttonText} />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     </>
@@ -217,12 +212,8 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  addButton: {
+  placeholder: {
     width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -253,21 +244,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
   },
-  addFirstButton: {
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  addFirstButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   scrollView: {
     flex: 1,
   },
   recipeGrid: {
     padding: 15,
-    gap: 15,
+    paddingBottom: 90,
   },
   recipeCard: {
     borderRadius: 12,
@@ -341,5 +323,20 @@ const styles = StyleSheet.create({
   categoryBadgeText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
