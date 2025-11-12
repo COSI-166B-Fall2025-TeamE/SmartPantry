@@ -94,11 +94,24 @@ export default function MyRecipesScreen() {
             </View>
           ) : recipes.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: colors.background }]}>
-              <Ionicons name="restaurant-outline" size={80} color={colors.text} style={{ opacity: 0.3 }} />
+              <Ionicons 
+                name="restaurant-outline" 
+                size={80} 
+                color={colors.text} 
+                style={{ opacity: 0.3 }} 
+              />
               <Text style={styles.emptyStateText}>No custom recipes yet</Text>
               <Text style={styles.emptyStateSubtext}>
                 Tap the + button to add your first recipe
               </Text>
+              <TouchableOpacity 
+                style={[styles.addFirstButton, { backgroundColor: colors.buttonBackground }]}
+                onPress={() => router.push('/add-recipe' as Href)}
+              >
+                <Text style={[styles.addFirstButtonText, { color: colors.buttonText }]}>
+                  Add Your First Recipe
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -238,6 +251,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.4,
     textAlign: 'center',
+    marginBottom: 30,
+  },
+  addFirstButton: {
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  addFirstButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
