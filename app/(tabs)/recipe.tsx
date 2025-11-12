@@ -8,6 +8,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 import { Href } from 'expo-router';
+import { fetchAllData } from '@/components/DatabaseFunctions';
+
 
 
 interface Recipe {
@@ -30,8 +32,19 @@ interface Recipe {
   dateModified: string | null;
 }
 
+interface PantryItem {
+  id: string;
+  name: string;
+  quantity: string;
+  expirationDate: string;
+}
+
+type FilterType = 'random' | 'expiring' | 'pantry';
+
+
 
 const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
+
 
 
 export default function RecipeTabScreen() {
@@ -43,18 +56,48 @@ export default function RecipeTabScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoriteStates, setFavoriteStates] = useState<{ [key: string]: boolean }>({});
+  const [filterType, setFilterType] = useState<FilterType>('random');
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
+
+
+
+  // Fetch pantry items on mount
+  useEffect(() => {
+    loadPantryItems();
+  }, []);
+
+  const loadPantryItems = async () => {
+    const pantryResult = await fetchAllData('expiration');
+    setPantryItems(pantryResult.data || []);
+  };
+
+  // Get expiring items (within 7 days)
+  const getExpiringItems = () => {
+    const today = new Date();
+    const weekFromNow = new Date();
+    weekFromNow.setDate(today.getDate() + 7);
+
+    return pantryItems.filter(item => {
+      const expirationDate = new Date(item.expirationDate);
+      return expirationDate >= today && expirationDate <= weekFromNow;
+    });
+  };
+
 
 
   // Fetch recipes from TheMealDB API
   useEffect(() => {
     fetchRecipes();
-  }, [selectedCategory]);
+  }, [selectedCategory, filterType]);
+
 
 
   // Load favorite states for current recipes
   useEffect(() => {
     loadFavoriteStates();
   }, [recipes]);
+
 
 
   const loadFavoriteStates = async () => {
@@ -66,50 +109,56 @@ export default function RecipeTabScreen() {
   };
 
 
+
   const fetchRecipes = async () => {
     setLoading(true);
     try {
-      if (selectedCategory === 'All') {
-        // Fetch random meals for "All" category
-        const randomMeals = await Promise.all(
-          Array.from({ length: 12 }, () => 
-            fetch('https://www.themealdb.com/api/json/v1/1/random.php')
-              .then(res => res.json())
-          )
-        );
-        
-        const formattedRecipes = randomMeals
-          .filter(result => result.meals && result.meals[0])
-          .map(result => formatRecipe(result.meals[0]));
-        
-        // Remove duplicates based on idMeal
-        const uniqueRecipes = Array.from(
-          new Map(formattedRecipes.map(recipe => [recipe.idMeal, recipe])).values()
-        );
-        
-        setRecipes(uniqueRecipes);
-      } else {
-        // Fetch specific category
-        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`);
-        const data = await response.json();
-        
-        if (data.meals) {
-          // Fetch full details for each meal (limit to 12 for performance)
-          const detailedMeals = await Promise.all(
-            data.meals.slice(0, 12).map((meal: any) => 
-              fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
+      if (filterType === 'random') {
+        // Original random fetch logic
+        if (selectedCategory === 'All') {
+          const randomMeals = await Promise.all(
+            Array.from({ length: 12 }, () => 
+              fetch('https://www.themealdb.com/api/json/v1/1/random.php')
                 .then(res => res.json())
             )
           );
           
-          const formattedRecipes = detailedMeals
+          const formattedRecipes = randomMeals
             .filter(result => result.meals && result.meals[0])
             .map(result => formatRecipe(result.meals[0]));
           
-          setRecipes(formattedRecipes);
+          const uniqueRecipes = Array.from(
+            new Map(formattedRecipes.map(recipe => [recipe.idMeal, recipe])).values()
+          );
+          
+          setRecipes(uniqueRecipes);
         } else {
-          setRecipes([]);
+          const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`);
+          const data = await response.json();
+          
+          if (data.meals) {
+            const detailedMeals = await Promise.all(
+              data.meals.slice(0, 12).map((meal: any) => 
+                fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
+                  .then(res => res.json())
+              )
+            );
+            
+            const formattedRecipes = detailedMeals
+              .filter(result => result.meals && result.meals[0])
+              .map(result => formatRecipe(result.meals[0]));
+            
+            setRecipes(formattedRecipes);
+          } else {
+            setRecipes([]);
+          }
         }
+      } else if (filterType === 'expiring') {
+        // Fetch 2 recipes per expiring item
+        await fetchRecipesByPantryItems(getExpiringItems());
+      } else if (filterType === 'pantry') {
+        // Fetch 2 recipes per pantry item
+        await fetchRecipesByPantryItems(pantryItems);
       }
     } catch (error) {
       console.error('Error fetching recipes:', error);
@@ -119,15 +168,60 @@ export default function RecipeTabScreen() {
     }
   };
 
+  const fetchRecipesByPantryItems = async (items: PantryItem[]) => {
+    if (items.length === 0) {
+      setRecipes([]);
+      return;
+    }
+
+    try {
+      const allRecipes: Recipe[] = [];
+      
+      for (const item of items) {
+        // Search by ingredient
+        const ingredientQuery = item.name.replace(/\s+/g, '_');
+        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`);
+        const data = await response.json();
+        
+        if (data.meals && data.meals.length > 0) {
+          // Get first 2 recipes for this ingredient
+          const recipesToFetch = data.meals.slice(0, 2);
+          
+          const detailedMeals = await Promise.all(
+            recipesToFetch.map((meal: any) => 
+              fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
+                .then(res => res.json())
+            )
+          );
+          
+          const formattedRecipes = detailedMeals
+            .filter(result => result.meals && result.meals[0])
+            .map(result => formatRecipe(result.meals[0]));
+          
+          allRecipes.push(...formattedRecipes);
+        }
+      }
+      
+      // Remove duplicates based on idMeal
+      const uniqueRecipes = Array.from(
+        new Map(allRecipes.map(recipe => [recipe.idMeal, recipe])).values()
+      );
+      
+      setRecipes(uniqueRecipes);
+    } catch (error) {
+      console.error('Error fetching recipes by pantry items:', error);
+      setRecipes([]);
+    }
+  };
+
+
 
   const formatRecipe = (meal: any): Recipe => {
-    // Extract ingredients and measures from the meal object
     const ingredients = [];
     for (let i = 1; i <= 20; i++) {
       const ingredient = meal[`strIngredient${i}`];
       const measure = meal[`strMeasure${i}`];
       
-      // Only add if ingredient exists and is not empty/null
       if (ingredient && ingredient.trim() && ingredient !== 'null') {
         ingredients.push({
           ingredient: ingredient.trim(),
@@ -135,7 +229,6 @@ export default function RecipeTabScreen() {
         });
       }
     }
-
 
     return {
       idMeal: meal.idMeal,
@@ -156,34 +249,29 @@ export default function RecipeTabScreen() {
   };
 
 
+
   // Search recipes by name AND ingredient simultaneously
   const handleSearch = async (query: string) => {
     if (query.length >= 3) {
       setLoading(true);
       try {
-        // Search by recipe name
         const nameSearchPromise = fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`)
           .then(res => res.json());
         
-        // Search by ingredient (replace spaces with underscores)
         const ingredientQuery = query.replace(/\s+/g, '_');
         const ingredientSearchPromise = fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`)
           .then(res => res.json());
         
-        // Wait for both searches to complete
         const [nameData, ingredientData] = await Promise.all([nameSearchPromise, ingredientSearchPromise]);
         
         let allRecipes: Recipe[] = [];
         
-        // Add recipes from name search
         if (nameData.meals) {
           const nameRecipes = nameData.meals.map(formatRecipe);
           allRecipes = [...allRecipes, ...nameRecipes];
         }
         
-        // Add recipes from ingredient search
         if (ingredientData.meals) {
-          // Fetch full details for ingredient search results
           const detailedMeals = await Promise.all(
             ingredientData.meals.slice(0, 12).map((meal: any) => 
               fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
@@ -198,7 +286,6 @@ export default function RecipeTabScreen() {
           allRecipes = [...allRecipes, ...ingredientRecipes];
         }
         
-        // Remove duplicates based on idMeal
         const uniqueRecipes = Array.from(
           new Map(allRecipes.map(recipe => [recipe.idMeal, recipe])).values()
         );
@@ -211,10 +298,10 @@ export default function RecipeTabScreen() {
         setLoading(false);
       }
     } else if (query.length === 0) {
-      // Reset to category view when search is cleared
       fetchRecipes();
     }
   };
+
 
 
   // Debounce search
@@ -225,9 +312,9 @@ export default function RecipeTabScreen() {
       }
     }, 500);
 
-
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
 
 
   // Filter recipes locally for shorter queries
@@ -241,9 +328,10 @@ export default function RecipeTabScreen() {
     : recipes;
 
 
+
   // Handle favorite toggle
   const handleFavoriteToggle = async (recipe: Recipe, event: any) => {
-    event.stopPropagation(); // Prevent navigation when tapping heart
+    event.stopPropagation();
     
     try {
       const favoriteRecipe: FavoriteRecipe = {
@@ -265,6 +353,18 @@ export default function RecipeTabScreen() {
     }
   };
 
+  const getFilterLabel = () => {
+    switch (filterType) {
+      case 'random':
+        return 'Random Suggestions';
+      case 'expiring':
+        return `Expiring Soon (${getExpiringItems().length} items)`;
+      case 'pantry':
+        return `My Pantry (${pantryItems.length} items)`;
+      default:
+        return 'Filter';
+    }
+  };
 
   return (
     <SafeAreaView 
@@ -279,7 +379,6 @@ export default function RecipeTabScreen() {
           <Text style={styles.title}>Recipe Recommendations</Text>
           <Text style={styles.subtitle}>Discover delicious meals</Text>
           
-          {/* Button Container */}
           <RNView style={styles.headerButtonContainer}>
             <TouchableOpacity 
               style={[
@@ -336,43 +435,117 @@ export default function RecipeTabScreen() {
           )}
         </View>
         
-        {/* Category Filter */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={[styles.categoryContainer, { backgroundColor: colors.background }]}
-          contentContainerStyle={styles.categoryContent}
-        >
-          {CATEGORIES.map((category) => (
+        {/* Category Filter with Filter Dropdown */}
+        <View style={[styles.filterRow, { backgroundColor: colors.background }]}>
+          {/* Filter Dropdown Button */}
+          <View style={styles.filterDropdownContainer}>
             <TouchableOpacity
-              key={category}
               style={[
-                styles.categoryChip,
-                {
-                  backgroundColor: selectedCategory === category 
-                    ? colors.buttonBackground 
-                    : (colorScheme === 'dark' ? '#4A4E6B' : '#CDD0E3')
-                }
+                styles.filterButton,
+                { backgroundColor: colors.buttonBackground }
               ]}
-              onPress={() => {
-                setSelectedCategory(category);
-                setSearchQuery(''); // Clear search when changing category
-              }}
+              onPress={() => setShowFilterDropdown(!showFilterDropdown)}
             >
-              <Text style={[
-                styles.categoryText,
-                {
-                  color: selectedCategory === category 
-                    ? colors.buttonText 
-                    : (colorScheme === 'dark' ? '#fff' : '#371B34')
-                }
-              ]}>
-                {category}
+              <Ionicons name="filter" size={16} color={colors.buttonText} />
+              <Text style={[styles.filterButtonText, { color: colors.buttonText }]} numberOfLines={1}>
+                {getFilterLabel()}
               </Text>
+              <Ionicons 
+                name={showFilterDropdown ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color={colors.buttonText} 
+              />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
 
+            {/* Dropdown Menu */}
+            {showFilterDropdown && (
+              <View style={[styles.dropdownMenu, { backgroundColor: colors.card }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownItem,
+                    filterType === 'random' && { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3' }
+                  ]}
+                  onPress={() => {
+                    setFilterType('random');
+                    setShowFilterDropdown(false);
+                  }}
+                >
+                  <Ionicons name="shuffle" size={18} color={colors.text} />
+                  <Text style={[styles.dropdownText, { color: colors.text }]}>Random Suggestions</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownItem,
+                    filterType === 'expiring' && { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3' }
+                  ]}
+                  onPress={() => {
+                    setFilterType('expiring');
+                    setShowFilterDropdown(false);
+                  }}
+                >
+                  <Ionicons name="time" size={18} color={colors.text} />
+                  <Text style={[styles.dropdownText, { color: colors.text }]}>
+                    Expiring Soon ({getExpiringItems().length} items)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownItem,
+                    filterType === 'pantry' && { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3' }
+                  ]}
+                  onPress={() => {
+                    setFilterType('pantry');
+                    setShowFilterDropdown(false);
+                  }}
+                >
+                  <Ionicons name="list" size={18} color={colors.text} />
+                  <Text style={[styles.dropdownText, { color: colors.text }]}>
+                    My Pantry ({pantryItems.length} items)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Category Scroll */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryScroll}
+            contentContainerStyle={styles.categoryContent}
+          >
+            {CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryChip,
+                  {
+                    backgroundColor: selectedCategory === category 
+                      ? colors.buttonBackground 
+                      : (colorScheme === 'dark' ? '#4A4E6B' : '#CDD0E3')
+                  }
+                ]}
+                onPress={() => {
+                  setSelectedCategory(category);
+                  setSearchQuery('');
+                }}
+              >
+                <Text style={[
+                  styles.categoryText,
+                  {
+                    color: selectedCategory === category 
+                      ? colors.buttonText 
+                      : (colorScheme === 'dark' ? '#fff' : '#371B34')
+                  }
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
         {/* Recipe List */}
         {loading ? (
@@ -398,7 +571,6 @@ export default function RecipeTabScreen() {
                           resizeMode="cover"
                         />
                         
-                        {/* Heart Button on Card */}
                         <TouchableOpacity
                           style={styles.heartButton}
                           onPress={(e) => handleFavoriteToggle(recipe, e)}
@@ -445,6 +617,10 @@ export default function RecipeTabScreen() {
                   <Text style={styles.emptyStateSubtext}>
                     {searchQuery.length > 0 && searchQuery.length < 3 
                       ? 'Type at least 3 characters to search'
+                      : filterType === 'expiring' && getExpiringItems().length === 0
+                      ? 'No items expiring soon in your pantry'
+                      : filterType === 'pantry' && pantryItems.length === 0
+                      ? 'No items in your pantry'
                       : 'Try a different recipe name, ingredient, or category'}
                   </Text>
                 </View>
@@ -456,7 +632,6 @@ export default function RecipeTabScreen() {
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -525,12 +700,60 @@ const styles = StyleSheet.create({
     color: '#999',
     fontWeight: 'bold',
   },
-  categoryContainer: {
-    maxHeight: 40,
+  filterRow: {
+    flexDirection: 'row',
     marginBottom: 15,
+    paddingLeft: 15,
+    gap: 10,
+  },
+  filterDropdownContainer: {
+    position: 'relative',
+    zIndex: 1000,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+    minWidth: 140,
+    maxWidth: 200,
+  },
+  filterButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    flex: 1,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    minWidth: 240,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 12,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  categoryScroll: {
+    flex: 1,
   },
   categoryContent: {
-    paddingHorizontal: 15,
+    paddingRight: 15,
     gap: 8,
   },
   categoryChip: {
