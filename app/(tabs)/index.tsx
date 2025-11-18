@@ -292,6 +292,36 @@ export default function TabOneScreen() {
                   </View>
                 </TouchableOpacity>
 
+                
+                {/* Reset Onboarding */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={async () => {
+                    try {
+                      await AsyncStorage.removeItem('hasSeenOnboarding');
+                      Alert.alert(
+                        'Onboarding Reset', 
+                        'Onboarding will show again the next time you open the app.',
+                        [{ text: 'OK' }]
+                      );
+                      setIsSidebarVisible(false);
+                    } catch (error) {
+                      console.error('Error resetting onboarding:', error);
+                      Alert.alert('Error', 'Failed to reset onboarding');
+                    }
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="refresh-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Reset Onboarding</Text>
+                  </View>
+                </TouchableOpacity>
+
                 {/* Help */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
@@ -512,7 +542,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 70,
+    paddingTop: 35,
   },
 
   menuButton: {
