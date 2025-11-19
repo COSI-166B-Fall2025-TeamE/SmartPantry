@@ -1,4 +1,3 @@
-// app/sidebar/help.tsx
 import Colors from '@/constants/templateColors';
 import { useRouter } from 'expo-router';
 import React from 'react';
