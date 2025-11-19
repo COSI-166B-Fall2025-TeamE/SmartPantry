@@ -1,8 +1,10 @@
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useState } from 'react';
 import { StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 import { fetchAllData } from './DatabaseFunctions';
+
 
 interface ExpirationItem {
   id: string;
@@ -22,16 +24,18 @@ const ExpirationItems: React.FC<ExpirationItemsProps> = ({ selectedDate, onItemP
   
   const [expirationItems, setItems] = useState<ExpirationItem[]>([]);
 
-  // Fetch all items on component mount
-  useEffect(() => {
-    loadItems();
-  }, []);
-
   
   const loadItems = async () => {
     const result = await fetchAllData('expiration');
     setItems(result.data);
   };
+
+  useFocusEffect(
+      React.useCallback(() => {      
+        loadItems();
+        return () => {};
+      }, []) 
+  );
   
   const filteredItems = selectedDate 
     ? expirationItems.filter(item => item.expirationDate === selectedDate)

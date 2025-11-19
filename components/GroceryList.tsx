@@ -1,5 +1,6 @@
 import Colors from '@/constants/templateColors';
 import { supabase } from '@/lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
 import { Session } from '@supabase/supabase-js';
 import React, { useEffect, useState } from 'react';
 import {
@@ -64,9 +65,12 @@ export default function GroceryList() {
     loadItemsnew(items);
   }, [items]);
 
-  useEffect(() => {
-    loadGroceryList()
-  }, [])
+  useFocusEffect(
+    React.useCallback(() => {      
+      loadGroceryList()
+      return () => {};
+    }, []) 
+  );
 
   const loadGroceryList = async () => {
     const groceryResult = await fetchAllData('groceryList');

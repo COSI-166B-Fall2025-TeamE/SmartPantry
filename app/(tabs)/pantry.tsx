@@ -2,10 +2,11 @@ import { deleteById, fetchAllData, insertData } from '@/components/DatabaseFunct
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import { Session } from '@supabase/supabase-js';
 import { useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated, FlatList, Modal, PanResponder, StyleSheet, Text, TextInput,
@@ -306,9 +307,12 @@ const MyPantryScreen = () => {
   }, [params.openModal]);
 
 
-  useEffect(() => {
-    loadPantryItems()
-  }, [])
+  useFocusEffect(
+      React.useCallback(() => {      
+        loadPantryItems();
+        return () => {};
+      }, []) 
+  );
 
   const loadPantryItems = async () => {
     // const { data: { user } } = await supabase.auth.getUser();
