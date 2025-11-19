@@ -1,3 +1,7 @@
+import Colors from '@/constants/templateColors';
+import { supabase } from '@/lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
+import { Session } from '@supabase/supabase-js';
 import React, { useEffect, useState } from 'react';
 import {
   FlatList,
@@ -11,9 +15,8 @@ import {
   useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { calculateRemainingExpiryDays, getExpiringSoonItems, getExpiryColorByDays } from '../data/expiryCalculator';
+import { calculateRemainingExpiryDays, getExpiryColorByDays } from '../data/expiryCalculator';
 import { deleteById, fetchAllData, insertData, updateById } from './DatabaseFunctions';
-import Colors from '@/constants/templateColors';
 
 type GroceryItem = {
   id: string;
@@ -62,22 +65,37 @@ export default function GroceryList() {
     loadItemsnew(items);
   }, [items]);
 
-  useEffect(() => {
-    loadGroceryList()
-  }, [])
+  useFocusEffect(
+    React.useCallback(() => {      
+      loadGroceryList()
+      return () => {};
+    }, []) 
+  );
 
   const loadGroceryList = async () => {
     const groceryResult = await fetchAllData('groceryList');
     sortItems(groceryResult.data)
   };
 
+  const [session, setSession] = useState<Session | null>(null)
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+  
   const addItem = async (text?: string) => {
     const itemText = text || inputText;
     if (itemText && itemText.trim()) {
       const newItem = { id: Date.now().toString(), text: itemText, completed: false };
       sortItems([...items, newItem]);
       setInputText('');
-      await insertData('groceryList', newItem);
+      await insertData('groceryList', newItem, session);
     }
   };
 
