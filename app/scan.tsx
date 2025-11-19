@@ -36,13 +36,17 @@ export default function Scan() {
 
       if (json.status === 1 && json.product) {
         const productName = json.product.product_name || 'Name not found';
-        
+        console.log(json)
         Alert.alert(
           'Product Found!',
           productName,
           [
+            {
+              text: "Add to Pantry",
+              onPress: () => router.push(`/pantry?openModal=true&itemName=${productName}`)
+            },
             { 
-              text: 'Scan Another', 
+              text: 'Scan a Different Item', 
               onPress: resetScanner
             },
             { 

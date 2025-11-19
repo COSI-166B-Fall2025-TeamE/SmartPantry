@@ -102,17 +102,18 @@ export default function LoginScreen() {
           <TouchableOpacity style={styles.button} onPress={signInWithEmail}>
             <Text style={styles.buttonText}>Sign In</Text>
           </TouchableOpacity>
-
-          <View style={styles.flexSpacer} />
-
-          {/*jump to sign up*/}
-          <TouchableOpacity onPress={() => router.push('/auth/signup')}>
-            <Text style={styles.linkText}>
-              Don't have an account? <Text style={styles.linkHighlight}>Sign up</Text>
-            </Text>
-          </TouchableOpacity>
         </>
       )}
+
+      <View style={styles.flexSpacer} />
+
+      {/*jump to sign up*/}
+      <TouchableOpacity onPress={() => router.push('/auth/signup')}>
+        <Text style={styles.linkText}>
+          Don't have an account? <Text style={styles.linkHighlight}>Sign up</Text>
+        </Text>
+      </TouchableOpacity>
+
     </View>
   );
 }

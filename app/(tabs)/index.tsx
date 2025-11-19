@@ -1,13 +1,14 @@
-import { Alert, Pressable, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'; // <-- CHANGED (Added Alert)
+import { Alert, Animated, Image, Pressable, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
-import { Colors } from '@/constants/globalStyles';
+import Colors from '@/constants/templateColors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
-import { Link, router, useFocusEffect } from 'expo-router'; // <-- CHANGED (Imported router)
-import { useCallback, useEffect, useState } from 'react'; //
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { getItemEmoji } from '@/app/utils/emojiUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -16,24 +17,80 @@ import EditScreenInfo from '@/components/EditScreenInfo';
 import { supabase } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
-// import { expirationItems } from '@/data/ItemsList';
-
 interface Item  {
   id: string;
   name: string;
   expirationDate: string;
+  emoji?: string;
+}
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+function FoodItemImage({ item, colorScheme, colors }: { item: Item, colorScheme: string, colors: any }) {
+  const emoji = getItemEmoji(item.name);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+  
+  /* First use emoji if can be find, if not use api to search image, if still cannot find, use default icon*/
+  useEffect(() => {
+    if (emoji) {
+      return;
+    }
+    /*  Fetch the image URL from API, could be chose*/
+    async function fetchImage() {
+      try {
+        const response = await fetch(
+          //5b5a2f6821564a428679068b372a2119
+          //the apikey is list list above, temporary not used becuase limit of the useage
+          //can be used when showing/ when you want to
+          `https://api.spoonacular.com/food/ingredients/search?query=${encodeURIComponent(item.name)}&apiKey=`
+        );
+        const data = await response.json();
+        if (data.results && data.results.length > 0 && data.results[0].image) {
+          setImageUrl(`https://spoonacular.com/cdn/ingredients_100x100/${data.results[0].image}`);
+        }
+      } catch (error) {
+        console.error('Error fetching image for', item.name, error);
+      }
+    }
+    fetchImage();
+  }, [item.name]);
+
+  return (
+    <View style={[
+      styles.itemImagePlaceholder,
+      {
+        backgroundColor: colorScheme === 'dark' ? colors.inputBackground : '#F0F0F0',
+        borderColor: colors.border
+      }
+    ]}>
+      {emoji ? (
+        <Text style={styles.emojiText}>{emoji}</Text>
+      ) : imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.itemImage}
+          resizeMode="cover"
+        />
+       ) : (
+        <Ionicons name="nutrition" size={28} color={colors.text} style={{ opacity: 0.7 }} />
+      )}
+    </View>
+  );
 }
 
 export default function TabOneScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
 
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
   useFocusEffect(
     useCallback(() => {
       checkUserData();
     }, [])
   );
+  
   const checkUserData = async () => {
     try {
       const user = await AsyncStorage.getItem('user');
@@ -51,26 +108,17 @@ export default function TabOneScreen() {
   };
 
   const [permission, requestPermission] = useCameraPermissions();
-  // const isPermissionGranted = Boolean(permission?.granted); // We don't need this line anymore
   const [isSidebarVisible, setIsSidebarVisible] = useState(false);
 
-  //const [items] = useState<FoodItem[]>([
-  //{ id: '1', name: 'Bananas', expirationDate: '09/30/2025' },
-  //{ id: '2', name: 'Milk', expirationDate: '10/08/2025' },
-  //{ id: '3', name: 'Bread', expirationDate: '10/10/2025' },
-  //]);
-
-  // const [items, setItems] = useState<Item[]>([]);
-
-
   const [expirationItems, setItems] = useState([]);
+
+  const animatedValues = expirationItems.map(() => new Animated.Value(1));//add to get the animated effect for the Expiring soon items
+
 
   // Fetch all items on component mount
   useEffect(() => {
     loadItems();
   }, []);
-
-  
 
   const loadItems = async () => {
     const result = await fetchAllData('expiration', session);
@@ -92,40 +140,24 @@ export default function TabOneScreen() {
       setSession(session)
     })
   }, [])
-  
 
-  //const userNames = [
-  //'Alex', 'Bailey', 'Casey', 'Drew', 'Emery', 'Finley', 'Harley', 'Indigo',
-  //'Jamie', 'Kai', 'Logan', 'Morgan', 'Noah', 'Parker', 'Quinn', 'Riley',
-  //'Sage', 'Taylor', 'Jordan', 'Avery', 'Reese', 'Skyler', 'Phoenix', 'River', 'Emerson'
-  //];
-  //const userName = userNames[Math.floor(Math.random() * userNames.length)];
-
-  //const userName = 'Promise';
-  //const userName = 'User';
   const months = [
-  'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-  'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
+    'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+    'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
   ];
   const now = new Date();
   const currentDate = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
-  
-  //const currentDate = 'SEPTEMBER 29, 2025';
 
-  // --- THIS IS THE NEW HANDLER FUNCTION --- // <-- CHANGED
   const handleScanPress = async () => {
     let currentPermission = permission;
     
-    // If we don't have permission details yet, or it's not granted, request it
     if (!currentPermission?.granted) {
       currentPermission = await requestPermission();
     }
     
-    // If permission is granted (either before or just now), navigate
     if (currentPermission.granted) {
       router.push('/scan');
     } else {
-      // Optional: Handle the case where permission is denied
       Alert.alert('Permission Denied', 'Camera permission is required to scan barcodes.');
     }
   };
@@ -133,197 +165,376 @@ export default function TabOneScreen() {
   return (
     <SafeAreaProvider>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <TouchableOpacity 
           style={styles.menuButton} 
           onPress={() => setIsSidebarVisible(true)}
         >
           <View style={styles.menuIcon}>
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
+            <View style={[styles.menuLine, { backgroundColor: colors.text }]} />
+            <View style={[styles.menuLine, { backgroundColor: colors.text }]} />
+            <View style={[styles.menuLine, { backgroundColor: colors.text }]} />
+            <View style={[styles.menuLine, { backgroundColor: colors.text }]} />
           </View>
         </TouchableOpacity>
           
-        <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/auth/login')}>
-          <Ionicons name="person" size={24} color="#4A4A4A" />
+        <TouchableOpacity 
+          style={[
+            styles.profileButton,
+            { 
+              backgroundColor: colors.profileButton,
+              borderColor: colors.text
+            }
+          ]}
+          onPress={() => router.push('/auth/login')}
+        >
+          <Ionicons 
+            name="person" 
+            size={24} 
+            color={colors.text}
+          />
         </TouchableOpacity>
       </View>
-      <SafeAreaView style={styles.container}>
+      
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {isSidebarVisible && (
-            <TouchableOpacity 
-              style={styles.sidebarOverlay}
-              onPress={() => setIsSidebarVisible(false)}
-              activeOpacity={1}
+          <TouchableOpacity 
+            style={styles.sidebarOverlay}
+            onPress={() => setIsSidebarVisible(false)}
+            activeOpacity={1}
+          >
+            <View 
+              style={[styles.sidebar, { backgroundColor: colors.card }]} 
+              onStartShouldSetResponder={() => true}
             >
-              <View style={styles.sidebar} onStartShouldSetResponder={() => true}>
-                <View style={styles.sidebarHeader}>
-                  <Text style={styles.sidebarTitle}>Menu</Text>
-                  <TouchableOpacity 
-                    style={styles.sidebarCloseButton}
-                    onPress={() => setIsSidebarVisible(false)}
-                  >
-                    <Text style={styles.sidebarCloseText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-                
-                <View style={styles.sidebarContent}>
-                  <TouchableOpacity style={styles.sidebarItem}
+              <View 
+                style={[
+                  styles.sidebarHeader, 
+                  { backgroundColor: colors.card, borderBottomColor: colors.border }
+                ]}
+              >
+                <Text style={[styles.sidebarTitle, { color: colors.text }]}>Menu</Text>
+                <TouchableOpacity 
+                  style={styles.sidebarCloseButton}
                   onPress={() => setIsSidebarVisible(false)}
-                  >
-                    <Text style={styles.sidebarItemText}>Home</Text>
-                  </TouchableOpacity>
-                  
-                 <Link href="/expiration" asChild>
-                    <TouchableOpacity 
-                      style={styles.sidebarItem}
-                      onPress={() => setIsSidebarVisible(false)}
-                    >
-                      <Text style={styles.sidebarItemText}>Expiration Dates</Text>
-                    </TouchableOpacity>
-                  </Link>
-                  
-                  <Link href="/grocery" asChild>
-                  <TouchableOpacity 
-                      style={styles.sidebarItem}
-                      onPress={() => setIsSidebarVisible(false)}
-                    >
-                    <Text style={styles.sidebarItemText}>Grocery List</Text>
-                  </TouchableOpacity>
-                  </Link>
-                  
-                  <TouchableOpacity 
-                    style={styles.sidebarItem}
-                    onPress={async () => {
-                      try {
-                        const storedItems = await fetchAllData('groceryList', session);
-                        if (storedItems.data) {
-                          const items = storedItems.data;
-                          const itemsList = items.map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`).join('\n');
-                          alert(`Grocery List:\n\n${itemsList || 'No items'}`);
-                        } else {
-                          alert('Grocery list is empty');
-                        }
-                      } catch (error) {
-                        alert('Failed to load grocery list');
-                      }
-                      setIsSidebarVisible(false);
-                    }}
-                  >
-                    <Text style={styles.sidebarItemText}>Show current shopping list</Text>
-                  </TouchableOpacity>
-
-                  <Link href="/recipe" asChild>
-                  <TouchableOpacity 
-                      style={styles.sidebarItem}
-                      onPress={() => setIsSidebarVisible(false)}
-                    >
-                    <Text style={styles.sidebarItemText}>Recipes</Text>
-                  </TouchableOpacity>
-                  </Link>
-                  
-                  <TouchableOpacity style={styles.sidebarItem}>
-                    <Text style={styles.sidebarItemText}>Help</Text>
-                  </TouchableOpacity>
-                </View>
+                >
+                  <Text style={[styles.sidebarCloseText, { color: colors.text }]}>×</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          )}
+
+              <View 
+                style={[
+                  styles.sidebarContent, 
+                  { backgroundColor: colors.card }
+                ]}
+              >
+                {/* Instructions */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={() => setIsSidebarVisible(false)}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="book-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Instructions</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Shopping List */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={async () => {
+                    try {
+                      const storedItems = await fetchAllData('groceryList', session);
+                      if (storedItems.data) {
+                        const items = storedItems.data;
+                        const itemsList = items
+                          .map((item: any) => `• ${item.text}${item.completed ? ' (completed)' : ''}`)
+                          .join('\n');
+                        alert(`Grocery List:\n\n${itemsList || 'No items'}`);
+                      } else {
+                        alert('Grocery list is empty');
+                      }
+                    } catch (error) {
+                      alert('Failed to load grocery list');
+                    }
+                    setIsSidebarVisible(false);
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor: colors.expiringCard}}>
+                  <Ionicons 
+                    name="cart-outline" 
+                    size={20} 
+                    color={colors.text}
+                    style={{ marginRight: 15 }}
+                  />
+                  <Text style={[styles.sidebarItemText, { color: colors.text }]}>Shopping List</Text>
+                </View>
+                </TouchableOpacity>
+
+                {/* About Us */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={() => setIsSidebarVisible(false)}
+                >
+                <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="people-outline" 
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>About Us</Text>
+                  </View>
+                </TouchableOpacity>
+
+                
+                {/* Reset Onboarding */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={async () => {
+                    try {
+                      await AsyncStorage.removeItem('hasSeenOnboarding');
+                      Alert.alert(
+                        'Onboarding Reset', 
+                        'Onboarding will show again the next time you open the app.',
+                        [{ text: 'OK' }]
+                      );
+                      setIsSidebarVisible(false);
+                    } catch (error) {
+                      console.error('Error resetting onboarding:', error);
+                      Alert.alert('Error', 'Failed to reset onboarding');
+                    }
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="refresh-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Reset Onboarding</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Help */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={() => setIsSidebarVisible(false)}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="construct-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Help</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
         
         {/* Welcome Message */}
-        <View style={styles.welcomeSection}>
-          {session && session.user ?(
-          <Text style={styles.welcomeText}>
-            Welcome back, <Text style={styles.userName}>{session.user.user_metadata.display_name}!</Text>
-          </Text>) :  (
-            <Text style={styles.welcomeText}>Welcome back, Guest</Text>)
-            }
-          <Text style={styles.dateText}>{currentDate}</Text>
+        <View style={[styles.welcomeSection, { backgroundColor: colors.background }]}>
+          {session && session.user ? (
+            <Text style={[styles.welcomeText, { color: colors.text }]}>
+              Welcome back, <Text style={[styles.userName, { color: colors.text }]}>{session.user.user_metadata.display_name}!</Text>
+            </Text>
+          ) : (
+            <Text style={[styles.welcomeText, { color: colors.text }]}>Welcome back, Guest!</Text>
+          )}
+          <Text style={[styles.dateText, { color: colors.text, opacity: 0.7 }]}>{currentDate}</Text>
         </View>
 
         {/* Scan Barcode Card */}
-        {/* // <-- CHANGED (onPress and removed 'disabled') */}
-        <Pressable style={styles.scanCard} onPress={handleScanPress}>
-          <View style={[styles.scanContent, { backgroundColor: Colors.primaryCard }]}>
-            <View style={{ backgroundColor: Colors.primaryCard }}>
-              <Text style={styles.scanTitle}>Scan A Barcode</Text>
-              <Text style={styles.scanSubtitle}>
+        <Pressable 
+          style={[
+            styles.scanCard, 
+            { 
+              backgroundColor: colors.scanCard,
+              borderColor: colors.text 
+            }
+          ]} 
+          onPress={handleScanPress}
+        >
+          <View style={[
+            styles.scanContent, 
+            { backgroundColor: colors.scanCard }
+          ]}>
+            <View style={{ backgroundColor: colors.scanCard }}>
+              <Text style={[styles.scanTitle, { color: colors.text }]}>Scan A Barcode</Text>
+              <Text style={[styles.scanSubtitle, { color: colors.text, opacity: 0.7 }]}>
                 Get started with a quick{'\n'}scan of an item near you.
               </Text>
             </View>
-            <View style={[styles.barcodeIcon, { backgroundColor: Colors.primaryCard }]}>
-              <View style={[styles.cornerTL, { backgroundColor: Colors.primaryCard }]} />
-              <View style={[styles.cornerTR, { backgroundColor: Colors.primaryCard }]} />
-              <View style={styles.barcodeLine} />
-              <View style={[styles.cornerBL, { backgroundColor: Colors.primaryCard }]} />
-              <View style={[styles.cornerBR, { backgroundColor: Colors.primaryCard }]} />
+            <View style={[
+              styles.barcodeIcon, 
+              { backgroundColor: colors.scanCard }
+            ]}>
+              <View style={[
+                styles.cornerTL, 
+                { 
+                  backgroundColor: colors.scanCard, 
+                  borderColor: colors.text 
+                }
+              ]} />
+              <View style={[
+                styles.cornerTR, 
+                { 
+                  backgroundColor: colors.scanCard, 
+                  borderColor: colors.text 
+                }
+              ]} />
+              <View style={[styles.barcodeLine, { backgroundColor: colors.text }]} />
+              <View style={[
+                styles.cornerBL, 
+                { 
+                  backgroundColor: colors.scanCard, 
+                  borderColor: colors.text 
+                }
+              ]} />
+              <View style={[
+                styles.cornerBR, 
+                { 
+                  backgroundColor: colors.scanCard, 
+                  borderColor: colors.text 
+                }
+              ]} />
             </View>
           </View>
         </Pressable>
-        
-        {/* // <-- CHANGED (Removed the old "CONTINUE SCANNING" Link) */}
 
         {/* OR Divider */}
         <View style={styles.dividerContainer}>
-          <Text style={styles.dividerText}>OR</Text>
+          <Text style={[styles.dividerText, { color: colors.text, opacity: 0.5 }]}>OR</Text>
         </View>
         
         {/* Manual Entry Button */}
-        <TouchableOpacity style={styles.manualButton} onPress={linkToPantry}>
-          <View style={styles.manualButtonTextContainer}>
-            <Text style={styles.manualButtonText}>Enter Items Manually</Text>
+        <TouchableOpacity 
+          style={[
+            styles.manualButton, 
+            { 
+              backgroundColor: colors.manualCard,
+              borderColor: colors.text 
+            }
+          ]}
+          onPress={linkToPantry}
+        >
+          <View style={[
+            styles.manualButtonTextContainer, 
+            { backgroundColor: colors.manualCard }
+          ]}>
+            <Text style={[styles.manualButtonText, { color: colors.text }]}>Enter Items Manually</Text>
           </View>
-          <View style={styles.manualButtonIconContainer}>
-            <Ionicons name="finger-print-outline" size={28} color={Colors.secondaryText} />
+          <View style={[
+            styles.manualButtonIconContainer, 
+            { backgroundColor: colors.manualCard }
+          ]}>
+            <Ionicons 
+              name="finger-print-outline" 
+              size={28} 
+              color={colors.text}
+            />
           </View>
         </TouchableOpacity>
-        
-        {/* Expiring Soon Section */}
-      <View style={styles.expiringSoonHeader}>
-        <Text style={styles.expiringSoonTitle}>Expiring Soon</Text>
-        <Text style={styles.itemCount}>{(expirationItems && expirationItems.length) || 0} items</Text>
-      </View>
-      
-      {/* Food Items Grid */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.itemsScroll}
-        contentContainerStyle={styles.itemsContainer}
-      >
-        {expirationItems && expirationItems.length > 0 ? (
-          expirationItems.map((item) => (
-            <View key={item.id} style={styles.itemContainer}>
-            <View style={styles.itemImagePlaceholder} />
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.itemDate}>{item.expirationDate}</Text>
-          </View>
-          ))
-        ) : (
-          <View style={[styles.foodCard, { alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={{ color: Colors.secondaryText }}>No items found</Text>
-          </View>
-        )}
-      </ScrollView>
-      
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
 
+        {/* Expiring Soon Section */}
+        <View style={styles.expiringSoonHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            <Text style={[styles.expiringSoonTitle, { color: colors.text }]}>Expiring Soon</Text>
+            <Text style={[styles.recipeHint, { color: colors.text }]}>Click for its recipes!</Text>
+          </View>
+          <Text style={[styles.itemCount, { color: colors.buttonBackground }]}>
+            {(expirationItems && expirationItems.length) || 0} items
+          </Text>
+        </View>
+      
+        {/* Food Items Grid */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.itemsScroll}
+          contentContainerStyle={styles.itemsContainer}
+        >
+          {expirationItems && expirationItems.length > 0 ? (
+            expirationItems.map((item: Item, index: number) => (
+              <AnimatedTouchableOpacity
+                key={item.id}
+                style={[
+                  styles.itemContainer,
+                  { 
+                    backgroundColor: colors.expiringCard,
+                    transform: [{ scale: animatedValues[index] }]
+                  },
+                ]}
+                activeOpacity={0.8}
+                onPressIn={() => {
+                  Animated.spring(animatedValues[index], {
+                    toValue: 0.95,
+                    useNativeDriver: true,
+                    speed: 100,
+                  }).start();
+                }}
+                onPressOut={() => {
+                  Animated.spring(animatedValues[index], {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    speed: 100,
+                  }).start();
+                }}
+                onPress={() => {
+                  router.push(`/recipe?search=${encodeURIComponent(item.name)}`);
+                }}
+              >
+                {/* emoji/icon */}
+                <FoodItemImage item={item} colorScheme={colorScheme} colors={colors} />
+
+                {/* item name */}
+                <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+                  {item.name}
+                </Text>
+
+                {/* expiration date */}
+                <Text
+                  style={[styles.itemDate, { color: colors.text, opacity: 0.7 }]}
+                  numberOfLines={1}
+                >
+                  {item.expirationDate}
+                </Text>
+              </AnimatedTouchableOpacity>
+            ))
+          ) : (
+            <View
+              style={[
+                styles.foodCard,
+                { alignItems: 'center', justifyContent: 'center' },
+              ]}
+            >
+              <Text style={{ color: colors.text, opacity: 0.7 }}>No items found</Text>
+            </View>
+          )}
+        </ScrollView> 
+     
+        <EditScreenInfo path="app/(tabs)/index.tsx" />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
 
-// ... styles remain the same
 const styles = StyleSheet.create({
-  
   container: {
-  flex: 1,
-  alignItems: 'center',
-  backgroundColor: Colors.background,
-  width: '100%',
+    flex: 1,
+    alignItems: 'center',
+    width: '100%',
   },
-
 
   // Header
   header: {
@@ -331,8 +542,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 70,
-    backgroundColor: Colors.background,
+    paddingTop: 35,
   },
 
   menuButton: {
@@ -348,39 +558,32 @@ const styles = StyleSheet.create({
   menuLine: {
     width: 24,
     height: 3,
-    backgroundColor: Colors.mainText,
     borderRadius: 2,
   },
   profileButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.mainText,
   },
 
   // Welcome Section
   welcomeSection: {
     paddingHorizontal: 24,
     paddingBottom: 16,
-    backgroundColor: Colors.background,
   },
   welcomeText: {
     fontSize: 30,
     fontWeight: '400',
-    color: Colors.mainText,
     marginBottom: 8,
   },
   userName: {
     fontWeight: '600',
-    color: Colors.mainText,
   },
   dateText: {
     fontSize: 16,
-    color: Colors.secondaryText,
     letterSpacing: 1,
     fontWeight: '500',
   },
@@ -389,17 +592,8 @@ const styles = StyleSheet.create({
   scanCard: {
     marginHorizontal: 24,
     marginTop: 16,
-    backgroundColor: Colors.primaryCard,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: Colors.mainText,
-    padding: 24,
-  },
-  barcodeCard: {
-    backgroundColor: Colors.primaryCard,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.mainText,
     padding: 24,
   },
   scanContent: {
@@ -411,12 +605,10 @@ const styles = StyleSheet.create({
   scanTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: Colors.mainText,
     marginBottom: 8,
   },
   scanSubtitle: {
     fontSize: 14,
-    color: '#4A4A4A',
     lineHeight: 20,
   },
   barcodeIcon: {
@@ -434,7 +626,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderColor: Colors.mainText,
     borderTopLeftRadius: 4,
   },
   cornerTR: {
@@ -445,7 +636,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderColor: Colors.mainText,
     borderTopRightRadius: 4,
   },
   cornerBL: {
@@ -456,7 +646,6 @@ const styles = StyleSheet.create({
     height: 20,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderColor: Colors.mainText,
     borderBottomLeftRadius: 4,
   },
   cornerBR: {
@@ -467,22 +656,13 @@ const styles = StyleSheet.create({
     height: 20,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderColor: Colors.mainText,
     borderBottomRightRadius: 4,
   },
   barcodeLine: {
     width: 50,
     height: 4,
-    backgroundColor: Colors.mainText,
     borderRadius: 2,
   },
-  linkText: {
-    marginTop: 8,
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.linkText,
-  },
-
 
   // OR Divider
   dividerContainer: {
@@ -495,40 +675,34 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 16,
     fontSize: 14,
-    color: '#A8A8A8',
     fontWeight: '600',
   },
 
-
   // Manual Entry Section
-    manualButton: {
-    backgroundColor: Colors.secondaryCard,
+  manualButton: {
     marginHorizontal: 24,
-
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: Colors.mainText,
     padding: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 16,
+    gap: 28,
   },
 
   manualButtonTextContainer: {
-    backgroundColor: Colors.secondaryCard,
+    flex: 1,
   },
 
   manualButtonIconContainer: {
-    backgroundColor: Colors.secondaryCard,
+    backgroundColor: 'transparent',
   },
 
   manualButtonText: {
     fontSize: 24,
     fontWeight: '700',
     lineHeight: 24,
-    textAlign: 'center',
-    color: Colors.mainText,
+    textAlign: 'left',
   },
 
   // Expiring Soon Section
@@ -540,21 +714,27 @@ const styles = StyleSheet.create({
     marginTop: 32,
     marginBottom: 16,
     backgroundColor: 'transparent',
-    gap: 160,
+    gap: 65,
   },
   expiringSoonTitle: {
     fontSize: 16,
     fontWeight: '400',
-    color: Colors.mainText,
+  },
+  recipeHint: {
+    fontStyle: 'italic',
+    fontSize: 12,
+    alignSelf: 'flex-end',
+    marginBottom: 2,
+    marginLeft: 8,
   },
   itemCount: {
     fontSize: 16,
-    color: Colors.highlightText,
   },
-    itemsScroll: {
+  itemsScroll: {
     paddingLeft: 24,
     minHeight: 200,
   },
+
   itemsContainer: {
     paddingRight: 24,
     paddingBottom: 16,
@@ -562,118 +742,101 @@ const styles = StyleSheet.create({
   },
 
   itemContainer: {
-  width: 130,
-  height: 180,
-  backgroundColor: '#FFFFFF',
-  borderRadius: 12,
-  marginRight: 16,
-  padding: 12,
-  alignItems: 'center',
-  justifyContent: 'flex-start',
-  shadowColor: '#000',
-  shadowOffset: {
-    width: 0,
-    height: 2,
-  },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
+    width: 130,
+    height: 180,
+    borderRadius: 16,
+    marginRight: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
 
   itemImagePlaceholder: {
     width: 80,
     height: 80,
-    backgroundColor: '#F0F0F0',
     borderRadius: 40,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  emojiText: {
+    fontSize: 36,
+    textAlign: 'center',
   },
 
   itemName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333333',
     marginBottom: 4,
     textAlign: 'center',
   },
 
   itemDate: {
     fontSize: 13,
-    color: '#666666',
     textAlign: 'center',
+    opacity: 0.75,
   },
-
-
+  itemImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
 
   foodCard: {
     width: 140,
     marginRight: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
   },
-  foodImagePlaceholder: {
-    width: 140,
-    height: 140,
-    backgroundColor: Colors.primaryCard,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-  foodName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.mainText,
-    marginBottom: 4,
-  },
-  foodDate: {
-    fontSize: 14,
-    color: Colors.secondaryText,
-  },
 
-  //styles for the side
+  // Sidebar styles
   sidebarOverlay: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  zIndex: 1000,
-  flex: 1,
-},
-
-sidebar: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: 280,
-  height: '100%',
-  backgroundColor: '#FFFFFF',
-  shadowColor: '#000',
-  shadowOffset: {
-    width: 0,
-    height: 2,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1000,
   },
-  shadowOpacity: 0.25,
-  shadowRadius: 3.84,
-  elevation: 5,
-  zIndex: 1001,
-},
 
-sidebarHeader: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: 20,
-  borderBottomWidth: 1,
-  borderBottomColor: '#E0E0E0',
-  backgroundColor: Colors.primaryCard,
-},
+  sidebar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '80%',
+    maxWidth: 280,
+    height: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1001,
+  },
+
+  sidebarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+  },
 
   sidebarTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: Colors.mainText,
   },
 
   sidebarCloseButton: {
@@ -683,23 +846,24 @@ sidebarHeader: {
   sidebarCloseText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.mainText,
   },
 
   sidebarContent: {
-    padding: 10,
+    flex: 1,
   },
 
   sidebarItem: {
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    width: '100%',
+    //borderRadius: 8,
+    //marginVertical: 4,
+    //backgroundColor: 'transparent',
   },
 
   sidebarItemText: {
-    fontSize: 16,
-    color: Colors.mainText,
+    fontSize: 18,
+    fontWeight: '500',
   },
-
 });

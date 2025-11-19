@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Session } from '@supabase/supabase-js';
+import { useCameraPermissions } from 'expo-camera';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -296,17 +298,26 @@ const MyPantryScreen = () => {
   const [newDate, setNewDate] = useState(new Date());
   const [isGridView, setIsGridView] = useState(false);
 
+  // In your component:
+  const params = useLocalSearchParams();
+  const router = useRouter();
 
-  // useEffect(() => {
-  //   if (params.openModal === 'true') {
-  //     setModalVisible(true);
-  //     router.setParams({ openModal: undefined });
-  //   }
-  // }, [params.openModal]);
+  useEffect(() => {
+    if (params.openModal === 'true') {
+      setModalVisible(true);
+      router.setParams({ openModal: undefined });
+    }
+    if (params.itemName !== undefined){
+      const scannedItemName = Array.isArray(params.itemName) ? params.itemName[0] : params.itemName;
+      setNewItemName(scannedItemName)
+      router.setParams({ itemName: undefined });
+    }
+  }, [params.openModal]);
 
-  // useEffect(() => {
-    
-  // }, [])
+
+  useEffect(() => {
+    loadPantryItems()
+  }, [])
 
   const loadPantryItems = async () => {
     const pantryResult = await fetchAllData('expiration', session);
@@ -366,7 +377,25 @@ const MyPantryScreen = () => {
     const result = await deleteById('expiration', id);
   };
 
+  const [permission, requestPermission] = useCameraPermissions();
 
+  // --- THIS IS THE NEW HANDLER FUNCTION --- // <-- CHANGED
+  const handleScanPress = async () => {
+    let currentPermission = permission;
+    
+    // If we don't have permission details yet, or it's not granted, request it
+    if (!currentPermission?.granted) {
+      currentPermission = await requestPermission();
+    }
+    
+    // If permission is granted (either before or just now), navigate
+    if (currentPermission.granted) {
+      router.push('/scan');
+    } else {
+      // Optional: Handle the case where permission is denied
+      Alert.alert('Permission Denied', 'Camera permission is required to scan barcodes.');
+    }
+  };
 
   const handleSwipeStart = () => {
     flatListRef.current?.setNativeProps({ scrollEnabled: false });
@@ -475,6 +504,20 @@ const MyPantryScreen = () => {
           styles.addButtonText,
           { color: colors.buttonText }
         ]}>+ Add Item</Text>
+      </TouchableOpacity>
+
+      {/* Add Button */}
+      <TouchableOpacity
+        style={[
+          styles.scanButton,
+          { backgroundColor: colors.buttonBackground }
+        ]}
+        onPress={() => handleScanPress()}
+      >
+        <Text style={[
+          styles.addButtonText,
+          { color: colors.buttonText }
+        ]}>+ Scan Item</Text>
       </TouchableOpacity>
 
 
@@ -700,6 +743,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  scanButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 30,
