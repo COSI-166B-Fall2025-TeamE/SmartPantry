@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { supabase } from '@/lib/supabase';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -33,9 +34,18 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // console.log('Current user from loading:', user); // Should not be null
+
+      if (loaded) {
+        SplashScreen.hideAsync();
+      }
+    };
+
+    checkUser(); // Call the async function
+
   }, [loaded]);
 
   if (!loaded) {

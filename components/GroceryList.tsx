@@ -32,7 +32,7 @@ export default function GroceryList() {
   const [suggestions, setExpirationSuggestions] = useState([]);
   
   const loadItemsnew = async (currentGroceryItems) => {
-    const result = await fetchAllData('expiration', session);
+    const result = await fetchAllData('expiration');
     if (result.success){
         const updatedItems = result.data.map((item, index) => {
           if (!item.id) {
@@ -69,8 +69,7 @@ export default function GroceryList() {
   }, [])
 
   const loadGroceryList = async () => {
-    const groceryResult = await fetchAllData('groceryList', session);
-    console.log(session, "Grocery list")
+    const groceryResult = await fetchAllData('groceryList');
     sortItems(groceryResult.data)
   };
 

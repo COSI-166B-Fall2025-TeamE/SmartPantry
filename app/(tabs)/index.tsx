@@ -121,9 +121,10 @@ export default function TabOneScreen() {
   }, []);
 
   const loadItems = async () => {
-    const result = await fetchAllData('expiration', session);
+    const result = await fetchAllData('expiration');
     if (result.success) {
       setItems(result.data);
+      console.log("Here are the items", result.data)
     } else {
       console.error('Error loading items:', result.error);
     }
@@ -249,7 +250,7 @@ export default function TabOneScreen() {
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
                   onPress={async () => {
                     try {
-                      const storedItems = await fetchAllData('groceryList', session);
+                      const storedItems = await fetchAllData('groceryList');
                       if (storedItems.data) {
                         const items = storedItems.data;
                         const itemsList = items

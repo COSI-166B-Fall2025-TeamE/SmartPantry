@@ -278,16 +278,7 @@ const MyPantryScreen = () => {
   const colors = Colors[colorScheme];
   const flatListRef = useRef<FlatList>(null);
   
-  const [pantryItems, setPantryItems] = useState<PantryItem[]>([
-    { id: '1', name: 'Flour', quantity: '2 kg' },
-    { id: '2', name: 'Sugar', quantity: '1 kg' },
-    { id: '3', name: 'Olive Oil', quantity: '500 ml' },
-    { id: '4', name: 'Tomatoes', quantity: '6 pcs' },
-    { id: '5', name: 'Milk', quantity: '1 L' },
-    { id: '6', name: 'Chicken Breast', quantity: '500 g' },
-    { id: '7', name: 'Rice', quantity: '3 kg' },
-    { id: '8', name: 'Eggs', quantity: '12 pcs' },
-  ]);
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
 
 
 
@@ -320,7 +311,9 @@ const MyPantryScreen = () => {
   }, [])
 
   const loadPantryItems = async () => {
-    const pantryResult = await fetchAllData('expiration', session);
+    // const { data: { user } } = await supabase.auth.getUser();
+    // console.log('Current user pantry:', user); // Should not be null
+    const pantryResult = await fetchAllData('expiration');
     setPantryItems(pantryResult.data)
   };
 
