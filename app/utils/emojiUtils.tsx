@@ -1,4 +1,3 @@
-// app/utils/emojiUtils.ts
 export const getItemEmoji = (itemName: string): string | null => {
   function getLastWord(name: string): string {
   const words = name.trim().split(/\s+/);

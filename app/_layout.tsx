@@ -73,7 +73,7 @@ function RootLayoutNav() {
            headerShown: true, 
            headerTitle: '',
            headerBackTitle: 'Back',
-           headerTintColor: '#007AFF'
+           headerTintColor: '#371B34'
          }} 
        />
         <Stack.Screen 
@@ -82,7 +82,7 @@ function RootLayoutNav() {
             headerShown: true, 
             headerTitle: '',
             headerBackTitle: 'Back',
-            headerTintColor: '#007AFF'
+            headerTintColor: '#371B34'
           }} 
         />
         <Stack.Screen 
@@ -91,7 +91,7 @@ function RootLayoutNav() {
             headerShown: true, 
             headerTitle: '',
             headerBackTitle: 'Back',
-            headerTintColor: '#007AFF'
+            headerTintColor: '#371B34'
           }} 
         />
         <Stack.Screen
@@ -101,7 +101,7 @@ function RootLayoutNav() {
             headerTransparent: true,
             headerTitle: '',
             headerBackTitle: ' Back',
-            headerTintColor: '#007AFF',
+            headerTintColor: '#371B34',
             headerTitleStyle: {color: '#000000'},
           }}
         />
@@ -112,7 +112,7 @@ function RootLayoutNav() {
             headerTransparent: true,
             headerTitle: '',
             headerBackTitle: ' Back',
-            headerTintColor: '#007AFF',
+            headerTintColor: '#371B34',
             headerTitleStyle: {color: '#000000'},
           }}
         />
