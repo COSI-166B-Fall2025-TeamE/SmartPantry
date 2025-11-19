@@ -115,15 +115,18 @@ export default function TabOneScreen() {
   const animatedValues = expirationItems.map(() => new Animated.Value(1));//add to get the animated effect for the Expiring soon items
 
 
-  // Fetch all items on component mount
-  useEffect(() => {
-    loadItems();
-  }, []);
+  useFocusEffect(
+      React.useCallback(() => {      
+        loadItems();
+        return () => {};
+      }, []) 
+  );
 
   const loadItems = async () => {
     const result = await fetchAllData('expiration');
     if (result.success) {
       setItems(result.data);
+      console.log("Here are the items", result.data)
     } else {
       console.error('Error loading items:', result.error);
     }

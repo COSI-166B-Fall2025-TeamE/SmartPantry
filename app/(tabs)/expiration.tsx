@@ -1,12 +1,14 @@
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import ExpirationItems from '@/components/ExpirationItems';
 import { Text, View } from '@/components/Themed';
-import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, useColorScheme } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar } from 'react-native-calendars';
 import Colors from '@/constants/templateColors';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, useColorScheme } from 'react-native';
+import { Calendar } from 'react-native-calendars';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 interface ExpirationItem {
   id: string;
@@ -29,9 +31,12 @@ export default function ExpirationTabScreen() {
   const [expirationItems, setItems] = useState<ExpirationItem[]>([]);
 
   // Fetch all items on component mount
-  useEffect(() => {
-    loadItems();
-  }, []);
+  useFocusEffect(
+      React.useCallback(() => {      
+        loadItems();
+        return () => {};
+      }, []) 
+  );
 
   useEffect(() => {
     const newMarkedDates: {[date: string]: any} = {};
@@ -50,7 +55,7 @@ export default function ExpirationTabScreen() {
 
     setMarkedDates(newMarkedDates);
   }, [expirationItems]);
-
+  
   const loadItems = async () => {
     const result = await fetchAllData('expiration');
     setItems(result.data);
