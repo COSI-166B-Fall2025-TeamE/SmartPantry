@@ -71,7 +71,7 @@ function RootLayoutNav() {
          name="sidebar/instructions" 
          options={{ 
            headerShown: true, 
-           headerTitle: 'Instructions',
+           headerTitle: '',
            headerBackTitle: 'Back',
            headerTintColor: '#007AFF'
          }} 

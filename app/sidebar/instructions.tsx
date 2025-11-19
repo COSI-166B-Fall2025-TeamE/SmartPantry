@@ -156,9 +156,40 @@ export default function InstructionsScreen() {
           <Text style={[styles.featureTitle, { color: colors.text }]}>Expiration Track</Text>
         </View>
         <Text style={[styles.description, { color: colors.text }]}>
-          Keep track of your items' expiration dates with our smart tracking system. 
-          The Expiration Track provides a clear calendar that visually displays items expiring today and in the coming days, with reminders, and also shows current inventory.
+          - It provides a clear calendar that visually displays items expiring today and in the coming days, with reminders.
         </Text>
+        <Text style={[styles.description, { color: colors.text }]}>
+          - Also shows current inventory and let user to search.
+        </Text>
+        <Text style={[styles.importantText]}>
+          Keep track of your items' expiration dates with our smart tracking system!
+        </Text>
+
+        <View style={[styles.exampleBox, { backgroundColor: colors.expiringCard, borderColor: colors.border }]}>
+          <View style={styles.searchExampleContainer}>
+            <TextInput
+              style={[
+                styles.searchInputExample,
+                { 
+                  color: colors.text, 
+                  backgroundColor: colors.inputBackground,
+                }
+              ]}
+              placeholder="Search items (e.g. milk, eggs)"
+              placeholderTextColor={colors.text + '80'}
+            />
+            <TouchableOpacity
+              style={styles.searchButtonExample}
+            >
+              <Ionicons 
+                name="search" 
+                size={20} 
+                color={colors.text} 
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.card }]}>
@@ -167,9 +198,13 @@ export default function InstructionsScreen() {
           <Text style={[styles.featureTitle, { color: colors.text }]}>Recipes</Text>
         </View>
         <Text style={[styles.description, { color: colors.text }]}>
-          Discover delicious recipes based on ingredients you already have.
-          Add your favourites, or create your own recipes.
-          Our smart recipe suggestion engine helps reduce food waste while creating tasty meals.
+          - Discover delicious recipes based on ingredients you already have.
+        </Text>
+        <Text style={[styles.description, { color: colors.text }]}>
+          - Add your favourites, or create your own recipes.
+        </Text>
+        <Text style={[styles.importantText]}>
+          Our smart recipe suggestion engine helps reduce food waste while creating tasty meals!
         </Text>
       </View>
 
@@ -179,7 +214,12 @@ export default function InstructionsScreen() {
           <Text style={[styles.featureTitle, { color: colors.text }]}>My Pantry</Text>
         </View>
         <Text style={[styles.description, { color: colors.text }]}>
-          View and manage all your pantry items in one place. 
+        - View and manage all your pantry items in one place. 
+        </Text>
+        <Text style={[styles.description, { color: colors.text }]}>
+        - Scan and manually enter your pantry items.
+        </Text>
+        <Text style={[styles.importantText]}>
           Easily search, filter, and update your inventory to keep track of what you have at home.
         </Text>
       </View>
@@ -275,4 +315,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  importantText: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginLeft: 34,
+    fontWeight: 'bold',
+    color: '#430a65ff',
+  },
+  searchExampleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  
+  searchInputExample: {
+    flex: 1,
+    height: 45,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    paddingRight: 40,
+  },
+  
+  searchButtonExample: {
+    position: 'absolute',
+    right: 10,
+    padding: 5,
+  },
+  
 });
