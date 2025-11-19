@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginLeft: 34,
     fontWeight: 'bold',
-    color: '#430a65ff',
+    color: '#371B34',
   },
   searchExampleContainer: {
     flexDirection: 'row',

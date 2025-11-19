@@ -76,6 +76,24 @@ function RootLayoutNav() {
            headerTintColor: '#007AFF'
          }} 
        />
+        <Stack.Screen 
+          name="sidebar/aboutus" 
+          options={{ 
+            headerShown: true, 
+            headerTitle: '',
+            headerBackTitle: 'Back',
+            headerTintColor: '#007AFF'
+          }} 
+        />
+        <Stack.Screen 
+          name="sidebar/help" 
+          options={{ 
+            headerShown: true, 
+            headerTitle: '',
+            headerBackTitle: 'Back',
+            headerTintColor: '#007AFF'
+          }} 
+        />
         <Stack.Screen
           name="auth/login"
           options={{

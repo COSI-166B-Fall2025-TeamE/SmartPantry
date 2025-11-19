@@ -286,7 +286,11 @@ export default function TabOneScreen() {
                 {/* About Us */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                  onPress={() => setIsSidebarVisible(false)}
+                  //onPress={() => setIsSidebarVisible(false)}
+                  onPress={() => {
+                    setIsSidebarVisible(false);
+                    router.push('/sidebar/aboutus' as any);
+                    }}
                 >
                 <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
                     <Ionicons 
@@ -299,7 +303,26 @@ export default function TabOneScreen() {
                   </View>
                 </TouchableOpacity>
 
-                
+                {/* Help */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  //onPress={() => setIsSidebarVisible(false)}
+                  onPress={() => {
+                    setIsSidebarVisible(false);
+                    router.push('/sidebar/help' as any);
+                    }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="construct-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Help</Text>
+                  </View>
+                </TouchableOpacity>
+
                 {/* Reset Onboarding */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
@@ -328,22 +351,7 @@ export default function TabOneScreen() {
                     <Text style={[styles.sidebarItemText, { color: colors.text }]}>Reset Onboarding</Text>
                   </View>
                 </TouchableOpacity>
-
-                {/* Help */}
-                <TouchableOpacity 
-                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                  onPress={() => setIsSidebarVisible(false)}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
-                    <Ionicons 
-                      name="construct-outline"
-                      size={20} 
-                      color={colors.text}
-                      style={{ marginRight: 15 }}
-                    />
-                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Help</Text>
-                  </View>
-                </TouchableOpacity>
+                
               </View>
             </View>
           </TouchableOpacity>
