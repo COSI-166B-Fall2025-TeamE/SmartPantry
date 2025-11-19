@@ -231,7 +231,11 @@ export default function TabOneScreen() {
                 {/* Instructions */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                  onPress={() => setIsSidebarVisible(false)}
+                  //onPress={() => setIsSidebarVisible(false)}
+                  onPress={() => {
+                    setIsSidebarVisible(false);
+                    router.push('/sidebar/instructions' as any);
+                    }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
                     <Ionicons 

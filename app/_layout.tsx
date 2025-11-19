@@ -57,6 +57,15 @@ function RootLayoutNav() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen 
+         name="sidebar/instructions" 
+         options={{ 
+           headerShown: true, 
+           headerTitle: 'Instructions',
+           headerBackTitle: 'Back',
+           headerTintColor: '#007AFF'
+         }} 
+       />
         <Stack.Screen
           name="auth/login"
           options={{
