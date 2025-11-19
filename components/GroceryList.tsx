@@ -265,7 +265,7 @@ export default function GroceryList() {
                               styles.suggestionQuantity,
                               { color: colors.text }
                             ]}>
-                              📦 {suggestion.quantity} {suggestion.quantity === 1 ? 'item' : 'items'} Currently
+                              📦 current {suggestion.quantity} in pantry
                             </Text>
                           )}
                         </View>
