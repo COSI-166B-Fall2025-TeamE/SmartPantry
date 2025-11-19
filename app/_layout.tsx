@@ -67,6 +67,33 @@ function RootLayoutNav() {
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen 
+         name="sidebar/instructions" 
+         options={{ 
+           headerShown: true, 
+           headerTitle: '',
+           headerBackTitle: 'Back',
+           headerTintColor: '#371B34'
+         }} 
+       />
+        <Stack.Screen 
+          name="sidebar/aboutus" 
+          options={{ 
+            headerShown: true, 
+            headerTitle: '',
+            headerBackTitle: 'Back',
+            headerTintColor: '#371B34'
+          }} 
+        />
+        <Stack.Screen 
+          name="sidebar/help" 
+          options={{ 
+            headerShown: true, 
+            headerTitle: '',
+            headerBackTitle: 'Back',
+            headerTintColor: '#371B34'
+          }} 
+        />
         <Stack.Screen
           name="auth/login"
           options={{
@@ -74,7 +101,7 @@ function RootLayoutNav() {
             headerTransparent: true,
             headerTitle: '',
             headerBackTitle: ' Back',
-            headerTintColor: '#007AFF',
+            headerTintColor: '#371B34',
             headerTitleStyle: {color: '#000000'},
           }}
         />
@@ -85,7 +112,7 @@ function RootLayoutNav() {
             headerTransparent: true,
             headerTitle: '',
             headerBackTitle: ' Back',
-            headerTintColor: '#007AFF',
+            headerTintColor: '#371B34',
             headerTitleStyle: {color: '#000000'},
           }}
         />

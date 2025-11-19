@@ -1,4 +1,3 @@
-// app/utils/emojiUtils.ts
 export const getItemEmoji = (itemName: string): string | null => {
   function getLastWord(name: string): string {
   const words = name.trim().split(/\s+/);
@@ -49,7 +48,7 @@ if (lowerName.includes('pumpkin')) return '🎃';
   
   // protein
   if (lowerName.includes('egg')) return '🥚';
-  if (lowerName.includes('chicken')) return '🍗';
+  if (lowerName.includes('chicken') || lowerName.includes('turkey')) return '🍗';
   if (lowerName.includes('meat')) return '🥩';
   if (lowerName.includes('fish')) return '🐟';
   if (lowerName.includes('shrimp')) return '🦐';
