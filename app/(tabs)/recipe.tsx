@@ -32,7 +32,7 @@ interface Recipe {
   strImageSource: string | null;
   strCreativeCommonsConfirmed: string | null;
   dateModified: string | null;
-  matchedIngredients?: string[]; // Added to track which pantry items matched
+  matchedIngredients?: string[];
 }
 
 interface PantryItem {
@@ -62,6 +62,7 @@ export default function RecipeTabScreen() {
   const [filterType, setFilterType] = useState<FilterType>('random');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
+  const [expiringItems, setExpiringItems] = useState<PantryItem[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
@@ -77,20 +78,22 @@ export default function RecipeTabScreen() {
 
   const loadPantryItems = async () => {
     const pantryResult = await fetchAllData('expiration');
-    setPantryItems(pantryResult.data || []);
-    console.log('Pantry items loaded:', pantryResult.data?.length || 0);
-  };
-
-  // Get expiring items (within 7 days)
-  const getExpiringItems = () => {
+    const items = pantryResult.data || [];
+    setPantryItems(items);
+    
+    // Calculate expiring items
     const today = new Date();
     const weekFromNow = new Date();
     weekFromNow.setDate(today.getDate() + 7);
 
-    return pantryItems.filter(item => {
+    const expiring = items.filter(item => {
       const expirationDate = new Date(item.expirationDate);
       return expirationDate >= today && expirationDate <= weekFromNow;
     });
+    
+    setExpiringItems(expiring);
+    console.log('Pantry items loaded:', items.length);
+    console.log('Expiring items:', expiring.length);
   };
 
 
@@ -164,7 +167,7 @@ export default function RecipeTabScreen() {
         }
       } else if (filterType === 'expiring') {
         // Fetch 2 recipes per expiring item
-        await fetchRecipesByPantryItems(getExpiringItems());
+        await fetchRecipesByPantryItems(expiringItems);
       } else if (filterType === 'pantry') {
         // Fetch 2 recipes per pantry item
         await fetchRecipesByPantryItems(pantryItems);
@@ -187,24 +190,32 @@ export default function RecipeTabScreen() {
       const allRecipes: Recipe[] = [];
       
       for (const item of items) {
+        console.log(`Fetching recipes for: ${item.name}`);
+        
         // Search by ingredient
-        const ingredientQuery = item.name.replace(/\s+/g, '_');
+        const ingredientQuery = item.name.trim().replace(/\s+/g, '_');
         const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`);
         const data = await response.json();
         
         if (data.meals && data.meals.length > 0) {
-          // Get first 2 recipes for this ingredient
+          console.log(`Found ${data.meals.length} recipes for ${item.name}`);
+          
+          // Get up to 2 recipes for this ingredient
           const recipesToFetch = data.meals.slice(0, 2);
           
           const detailedMeals = await Promise.all(
             recipesToFetch.map((meal: any) => 
               fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
                 .then(res => res.json())
+                .catch(err => {
+                  console.error(`Error fetching recipe ${meal.idMeal}:`, err);
+                  return null;
+                })
             )
           );
           
           const formattedRecipes = detailedMeals
-            .filter(result => result.meals && result.meals[0])
+            .filter(result => result && result.meals && result.meals[0])
             .map(result => {
               const recipe = formatRecipe(result.meals[0]);
               // Mark this recipe with the matched ingredient
@@ -212,9 +223,14 @@ export default function RecipeTabScreen() {
               return recipe;
             });
           
+          console.log(`Successfully formatted ${formattedRecipes.length} recipes for ${item.name}`);
           allRecipes.push(...formattedRecipes);
+        } else {
+          console.log(`No recipes found for ${item.name}`);
         }
       }
+      
+      console.log(`Total recipes before deduplication: ${allRecipes.length}`);
       
       // Remove duplicates and combine matched ingredients
       const recipeMap = new Map<string, Recipe>();
@@ -233,7 +249,9 @@ export default function RecipeTabScreen() {
         }
       });
       
-      setRecipes(Array.from(recipeMap.values()));
+      const finalRecipes = Array.from(recipeMap.values());
+      console.log(`Total unique recipes: ${finalRecipes.length}`);
+      setRecipes(finalRecipes);
     } catch (error) {
       console.error('Error fetching recipes by pantry items:', error);
       setRecipes([]);
@@ -384,7 +402,7 @@ export default function RecipeTabScreen() {
       case 'random':
         return 'Random Suggestions';
       case 'expiring':
-        return `Expiring Soon (${getExpiringItems().length} items)`;
+        return `Expiring Soon (${expiringItems.length} items)`;
       case 'pantry':
         return `My Pantry (${pantryItems.length} items)`;
       default:
@@ -512,7 +530,7 @@ export default function RecipeTabScreen() {
                 >
                   <Ionicons name="time" size={18} color={colors.text} />
                   <Text style={[styles.dropdownText, { color: colors.text }]}>
-                    Expiring Soon ({getExpiringItems().length} items)
+                    Expiring Soon ({expiringItems.length} items)
                   </Text>
                 </TouchableOpacity>
 
@@ -660,7 +678,7 @@ export default function RecipeTabScreen() {
                   <Text style={styles.emptyStateSubtext}>
                     {searchQuery.length > 0 && searchQuery.length < 3 
                       ? 'Type at least 3 characters to search'
-                      : filterType === 'expiring' && getExpiringItems().length === 0
+                      : filterType === 'expiring' && expiringItems.length === 0
                       ? 'No items expiring soon in your pantry'
                       : filterType === 'pantry' && pantryItems.length === 0
                       ? 'No items in your pantry'
