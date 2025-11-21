@@ -1,3 +1,7 @@
+import Colors from '@/constants/templateColors';
+import { supabase } from '@/lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
+import { Session } from '@supabase/supabase-js';
 import React, { useEffect, useState } from 'react';
 import {
   FlatList,
@@ -11,9 +15,8 @@ import {
   useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { calculateRemainingExpiryDays, getExpiringSoonItems, getExpiryColorByDays } from '../data/expiryCalculator';
+import { calculateRemainingExpiryDays, getExpiryColorByDays } from '../data/expiryCalculator';
 import { deleteById, fetchAllData, insertData, updateById } from './DatabaseFunctions';
-import Colors from '@/constants/templateColors';
 
 type GroceryItem = {
   id: string;
@@ -28,10 +31,17 @@ export default function GroceryList() {
   const [items, setItems] = useState<Array<GroceryItem>>([]);
   const [inputText, setInputText] = useState('');
   const [suggestions, setExpirationSuggestions] = useState([]);
+  const [suggestionViewMode, setSuggestionViewMode] = useState<'days' | 'quantity'>('days');
   
   const loadItemsnew = async (currentGroceryItems) => {
     const result = await fetchAllData('expiration');
     if (result.success){
+      //count the quantity
+        const itemCounts = {};
+        result.data.forEach(item => {
+          itemCounts[item.name] = (itemCounts[item.name] || 0) + 1;
+        });
+
         const updatedItems = result.data.map((item, index) => {
           if (!item.id) {
             console.warn('Item without ID found:', item);
@@ -47,37 +57,69 @@ export default function GroceryList() {
         });
 
         const currentItemTexts = currentGroceryItems.map(item => item.text.toLowerCase());
-        const sortedFilteredItems = updatedItems.filter(
-          suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase())
-        ).sort((a, b) => a.expiryDays - b.expiryDays).slice(0, 4);
 
-        setExpirationSuggestions(sortedFilteredItems)
-    } else {
-      console.error('Error loading items:', result.error);
-    }
+        let sortedFilteredItems;
+        if (suggestionViewMode === 'days') {
+          //fliter by date
+          sortedFilteredItems = updatedItems
+            .filter(suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase()))
+            .sort((a, b) => a.expiryDays - b.expiryDays)
+            .slice(0, 4);
+        } else {
+          //fliter by quantity
+          sortedFilteredItems = updatedItems
+            .filter(suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase()))
+            .sort((a, b) => a.quantity - b.quantity)
+            .slice(0, 4);
+        }
+
+        setExpirationSuggestions(sortedFilteredItems);
+      } else {
+        console.error('Error loading items:', result.error);
+      }
+        
   };
+
+  useEffect(() => {
+    loadItemsnew(items);
+  }, [suggestionViewMode]);
 
   // Fetch all items on component mount
   useEffect(() => {
     loadItemsnew(items);
   }, [items]);
 
-  useEffect(() => {
-    loadGroceryList()
-  }, [])
+  useFocusEffect(
+    React.useCallback(() => {      
+      loadGroceryList()
+      return () => {};
+    }, []) 
+  );
 
   const loadGroceryList = async () => {
     const groceryResult = await fetchAllData('groceryList');
     sortItems(groceryResult.data)
   };
 
+  const [session, setSession] = useState<Session | null>(null)
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+  
   const addItem = async (text?: string) => {
     const itemText = text || inputText;
     if (itemText && itemText.trim()) {
       const newItem = { id: Date.now().toString(), text: itemText, completed: false };
       sortItems([...items, newItem]);
       setInputText('');
-      await insertData('groceryList', newItem);
+      await insertData('groceryList', newItem, session);
     }
   };
 
@@ -170,7 +212,17 @@ export default function GroceryList() {
             suggestions.length > 0 ? (
               <View style={[styles.suggestionsWrapper, { backgroundColor: colors.background }]}>
                 <View style={[styles.suggestionsContainer, { backgroundColor: colors.background }]}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Suggestions:</Text>
+                  <View style={styles.suggestionsHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Suggestions:</Text>
+                    <TouchableOpacity 
+                      style={[styles.toggleViewButton, { backgroundColor: colors.buttonBackground }]}
+                      onPress={() => setSuggestionViewMode(suggestionViewMode === 'days' ? 'quantity' : 'days')}
+                    >
+                      <Text style={[styles.toggleViewButtonText, { color: colors.buttonText }]}>
+                        {suggestionViewMode === 'days' ? 'click to show by remain quantity' : 'click to show by remain days'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <View style={styles.suggestionsGrid}>
                     {suggestions.map((suggestion, index) => (
                       <TouchableOpacity
@@ -195,18 +247,27 @@ export default function GroceryList() {
                           ]}>
                             {suggestion.name}
                           </Text>
-                          <Text style={[
-                            suggestion.expiryDays < 0 
-                              ? styles.suggestionExpiryExpired 
-                              : styles.suggestionExpiry, 
-                            { color: getExpiryColorByDays(suggestion.expiryDays) }
-                          ]}>
-                            ⏱️ {suggestion.expiryDays > 0 
-                              ? `Expires in ${suggestion.expiryDays} days` 
-                              : suggestion.expiryDays < 0 
-                                ? `Expired for ${Math.abs(suggestion.expiryDays)} days` 
-                                : 'Expires today'}
-                          </Text>
+                          {suggestionViewMode === 'days' ? (
+                            <Text style={[
+                              suggestion.expiryDays < 0 
+                                ? styles.suggestionExpiryExpired 
+                                : styles.suggestionExpiry, 
+                              { color: getExpiryColorByDays(suggestion.expiryDays) }
+                            ]}>
+                              ⏱️ {suggestion.expiryDays > 0 
+                                ? `Expires in ${suggestion.expiryDays} days` 
+                                : suggestion.expiryDays < 0 
+                                  ? `Expired for ${Math.abs(suggestion.expiryDays)} days` 
+                                  : 'Expires today'}
+                            </Text>
+                          ) : (
+                            <Text style={[
+                              styles.suggestionQuantity,
+                              { color: colors.text }
+                            ]}>
+                              📦 current {suggestion.quantity} in pantry
+                            </Text>
+                          )}
                         </View>
                         <Text style={[
                           styles.suggestionPlus,
@@ -395,4 +456,28 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
+
+  suggestionsHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+},
+
+toggleViewButton: {
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 8,
+},
+
+toggleViewButtonText: {
+  fontSize: 12,
+  fontWeight: '600',
+},
+
+suggestionQuantity: {
+  fontSize: 11,
+  fontWeight: '600',
+  marginTop: 3,
+},
 });

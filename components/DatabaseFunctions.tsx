@@ -1,9 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 // Initialize Supabase client
 const supabaseUrl = "https://lmjsnvqjntyyorvmxyib.supabase.co"
 const supabaseKey = "sb_publishable_aeWD6oACdSDgfqi4csNVwA_FwYORzpU"
-const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 // ==================== RETRIEVE DATA ====================
 
@@ -14,14 +15,32 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  */
 export const fetchAllData = async (tableName: string) => {
   try {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*');
-
-    if (error) throw error;
-
-    console.log(`Data fetched from ${tableName}`);
-    return { success: true, data };
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user){
+      console.log("Current User: " , user.user_metadata.display_name)
+    }
+    else{
+      console.log("Current User: ", user)
+    }
+    
+    if (user){
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+      if (error) throw error;
+      console.log(`Data fetched from ${tableName}`);
+      return { success: true, data};
+    }
+    else {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .is('user_id', null); // Filter where 'user_id' is null;
+      if (error) throw error;
+      console.log(`Data fetched from ${tableName}`);
+      return { success: true, data};      
+    }
+    
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
     console.error(`Error fetching data from ${tableName}:`, err);
@@ -37,8 +56,10 @@ export const fetchAllData = async (tableName: string) => {
  * @param dataToInsert - Object or array of objects to insert
  * @returns Object with success status and inserted data or error
  */
-export const insertData = async (tableName: string, dataToInsert: any) => {
+export const insertData = async (tableName: string, dataToInsert: any, session: Session) => {
   try {
+    dataToInsert["user_id"] = session && session.user ? session.user.user_metadata.sub : null
+
     const { data, error } = await supabase
       .from(tableName)
       .insert([dataToInsert])

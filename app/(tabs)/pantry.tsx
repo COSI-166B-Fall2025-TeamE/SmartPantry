@@ -1,9 +1,12 @@
 import { deleteById, fetchAllData, insertData } from '@/components/DatabaseFunctions';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
+import { Session } from '@supabase/supabase-js';
 import { useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated, FlatList, Modal, PanResponder, StyleSheet, Text, TextInput,
@@ -276,16 +279,7 @@ const MyPantryScreen = () => {
   const colors = Colors[colorScheme];
   const flatListRef = useRef<FlatList>(null);
   
-  const [pantryItems, setPantryItems] = useState<PantryItem[]>([
-    { id: '1', name: 'Flour', quantity: '2 kg' },
-    { id: '2', name: 'Sugar', quantity: '1 kg' },
-    { id: '3', name: 'Olive Oil', quantity: '500 ml' },
-    { id: '4', name: 'Tomatoes', quantity: '6 pcs' },
-    { id: '5', name: 'Milk', quantity: '1 L' },
-    { id: '6', name: 'Chicken Breast', quantity: '500 g' },
-    { id: '7', name: 'Rice', quantity: '3 kg' },
-    { id: '8', name: 'Eggs', quantity: '12 pcs' },
-  ]);
+  const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
 
 
 
@@ -312,11 +306,17 @@ const MyPantryScreen = () => {
     }
   }, [params.openModal]);
 
-  useEffect(() => {
-    loadPantryItems()
-  }, [])
+
+  useFocusEffect(
+      React.useCallback(() => {      
+        loadPantryItems();
+        return () => {};
+      }, []) 
+  );
 
   const loadPantryItems = async () => {
+    // const { data: { user } } = await supabase.auth.getUser();
+    // console.log('Current user pantry:', user); // Should not be null
     const pantryResult = await fetchAllData('expiration');
     setPantryItems(pantryResult.data)
   };
@@ -325,11 +325,27 @@ const MyPantryScreen = () => {
     item.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const [session, setSession] = useState<Session | null>(null)
+
+  useEffect(() => {
+    loadPantryItems()
+  }, [session])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+
+
   const addItem = async () => {
     if (newItemName && newItemQuantity && newDate) {
       const newDateString = newDate.toISOString().substring(0, 10);
       
-      console.log(newDate)
       const newItem = {
         id: Date.now().toString(),
         name: newItemName,
@@ -340,7 +356,7 @@ const MyPantryScreen = () => {
       // const newItem = { id: Date.now().toString(), text: itemText, completed: false };
       // sortItems([...items, newItem]);
       // setInputText('');
-      await insertData('expiration', newItem);
+      await insertData('expiration', newItem, session);
       setPantryItems([...pantryItems, newItem]);
       setNewItemName('');
       setNewItemQuantity('');

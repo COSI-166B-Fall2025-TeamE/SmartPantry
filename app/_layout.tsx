@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { supabase } from '@/lib/supabase';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -33,9 +34,18 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      // console.log('Current user from loading:', user); // Should not be null
+
+      if (loaded) {
+        SplashScreen.hideAsync();
+      }
+    };
+
+    checkUser(); // Call the async function
+
   }, [loaded]);
 
   if (!loaded) {
@@ -50,9 +60,40 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack
+        screenOptions={{
+          headerShown: false, // hiding headers globally
+        }}>
+        <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen 
+         name="sidebar/instructions" 
+         options={{ 
+           headerShown: true, 
+           headerTitle: '',
+           headerBackTitle: 'Back',
+           headerTintColor: '#371B34'
+         }} 
+       />
+        <Stack.Screen 
+          name="sidebar/aboutus" 
+          options={{ 
+            headerShown: true, 
+            headerTitle: '',
+            headerBackTitle: 'Back',
+            headerTintColor: '#371B34'
+          }} 
+        />
+        <Stack.Screen 
+          name="sidebar/help" 
+          options={{ 
+            headerShown: true, 
+            headerTitle: '',
+            headerBackTitle: 'Back',
+            headerTintColor: '#371B34'
+          }} 
+        />
         <Stack.Screen
           name="auth/login"
           options={{
@@ -60,7 +101,7 @@ function RootLayoutNav() {
             headerTransparent: true,
             headerTitle: '',
             headerBackTitle: ' Back',
-            headerTintColor: '#007AFF',
+            headerTintColor: '#371B34',
             headerTitleStyle: {color: '#000000'},
           }}
         />
@@ -71,7 +112,7 @@ function RootLayoutNav() {
             headerTransparent: true,
             headerTitle: '',
             headerBackTitle: ' Back',
-            headerTintColor: '#007AFF',
+            headerTintColor: '#371B34',
             headerTitleStyle: {color: '#000000'},
           }}
         />

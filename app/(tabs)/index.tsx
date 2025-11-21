@@ -1,14 +1,16 @@
-import { Alert, Pressable, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { Alert, Animated, Image, Pressable, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
 
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
 import Ionicons from '@expo/vector-icons/build/Ionicons';
 import { useCameraPermissions } from 'expo-camera';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { getItemEmoji } from '@/app/utils/emojiUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import EditScreenInfo from '@/components/EditScreenInfo';
@@ -19,6 +21,61 @@ interface Item  {
   id: string;
   name: string;
   expirationDate: string;
+  emoji?: string;
+}
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+function FoodItemImage({ item, colorScheme, colors }: { item: Item, colorScheme: string, colors: any }) {
+  const emoji = getItemEmoji(item.name);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+  
+  /* First use emoji if can be find, if not use api to search image, if still cannot find, use default icon*/
+  useEffect(() => {
+    if (emoji) {
+      return;
+    }
+    /*  Fetch the image URL from API, could be chose*/
+    async function fetchImage() {
+      try {
+        const response = await fetch(
+          //5b5a2f6821564a428679068b372a2119
+          //the apikey is list list above, temporary not used becuase limit of the useage
+          //can be used when showing/ when you want to
+          `https://api.spoonacular.com/food/ingredients/search?query=${encodeURIComponent(item.name)}&apiKey=`
+        );
+        const data = await response.json();
+        if (data.results && data.results.length > 0 && data.results[0].image) {
+          setImageUrl(`https://spoonacular.com/cdn/ingredients_100x100/${data.results[0].image}`);
+        }
+      } catch (error) {
+        console.error('Error fetching image for', item.name, error);
+      }
+    }
+    fetchImage();
+  }, [item.name]);
+
+  return (
+    <View style={[
+      styles.itemImagePlaceholder,
+      {
+        backgroundColor: colorScheme === 'dark' ? colors.inputBackground : '#F0F0F0',
+        borderColor: colors.border
+      }
+    ]}>
+      {emoji ? (
+        <Text style={styles.emojiText}>{emoji}</Text>
+      ) : imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.itemImage}
+          resizeMode="cover"
+        />
+       ) : (
+        <Ionicons name="nutrition" size={28} color={colors.text} style={{ opacity: 0.7 }} />
+      )}
+    </View>
+  );
 }
 
 export default function TabOneScreen() {
@@ -27,7 +84,7 @@ export default function TabOneScreen() {
 
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
   useFocusEffect(
     useCallback(() => {
       checkUserData();
@@ -55,15 +112,21 @@ export default function TabOneScreen() {
 
   const [expirationItems, setItems] = useState([]);
 
-  // Fetch all items on component mount
-  useEffect(() => {
-    loadItems();
-  }, []);
+  const animatedValues = expirationItems.map(() => new Animated.Value(1));//add to get the animated effect for the Expiring soon items
+
+
+  useFocusEffect(
+      React.useCallback(() => {      
+        loadItems();
+        return () => {};
+      }, []) 
+  );
 
   const loadItems = async () => {
     const result = await fetchAllData('expiration');
     if (result.success) {
       setItems(result.data);
+      console.log("Here are the items", result.data)
     } else {
       console.error('Error loading items:', result.error);
     }
@@ -171,7 +234,11 @@ export default function TabOneScreen() {
                 {/* Instructions */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                  onPress={() => setIsSidebarVisible(false)}
+                  //onPress={() => setIsSidebarVisible(false)}
+                  onPress={() => {
+                    setIsSidebarVisible(false);
+                    router.push('/sidebar/instructions' as any);
+                    }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
                     <Ionicons 
@@ -219,7 +286,11 @@ export default function TabOneScreen() {
                 {/* About Us */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                  onPress={() => setIsSidebarVisible(false)}
+                  //onPress={() => setIsSidebarVisible(false)}
+                  onPress={() => {
+                    setIsSidebarVisible(false);
+                    router.push('/sidebar/aboutus' as any);
+                    }}
                 >
                 <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
                     <Ionicons 
@@ -235,7 +306,11 @@ export default function TabOneScreen() {
                 {/* Help */}
                 <TouchableOpacity 
                   style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
-                  onPress={() => setIsSidebarVisible(false)}
+                  //onPress={() => setIsSidebarVisible(false)}
+                  onPress={() => {
+                    setIsSidebarVisible(false);
+                    router.push('/sidebar/help' as any);
+                    }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
                     <Ionicons 
@@ -247,6 +322,36 @@ export default function TabOneScreen() {
                     <Text style={[styles.sidebarItemText, { color: colors.text }]}>Help</Text>
                   </View>
                 </TouchableOpacity>
+
+                {/* Reset Onboarding */}
+                <TouchableOpacity 
+                  style={[styles.sidebarItem, { borderBottomColor: colors.border }]}
+                  onPress={async () => {
+                    try {
+                      await AsyncStorage.removeItem('hasSeenOnboarding');
+                      Alert.alert(
+                        'Onboarding Reset', 
+                        'Onboarding will show again the next time you open the app.',
+                        [{ text: 'OK' }]
+                      );
+                      setIsSidebarVisible(false);
+                    } catch (error) {
+                      console.error('Error resetting onboarding:', error);
+                      Alert.alert('Error', 'Failed to reset onboarding');
+                    }
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center',backgroundColor:colors.expiringCard }}>
+                    <Ionicons 
+                      name="refresh-outline"
+                      size={20} 
+                      color={colors.text}
+                      style={{ marginRight: 15 }}
+                    />
+                    <Text style={[styles.sidebarItemText, { color: colors.text }]}>Reset Onboarding</Text>
+                  </View>
+                </TouchableOpacity>
+                
               </View>
             </View>
           </TouchableOpacity>
@@ -358,46 +463,81 @@ export default function TabOneScreen() {
 
         {/* Expiring Soon Section */}
         <View style={styles.expiringSoonHeader}>
-          <Text style={[styles.expiringSoonTitle, { color: colors.text }]}>Expiring Soon</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            <Text style={[styles.expiringSoonTitle, { color: colors.text }]}>Expiring Soon</Text>
+            <Text style={[styles.recipeHint, { color: colors.text }]}>Click for its recipes!</Text>
+          </View>
           <Text style={[styles.itemCount, { color: colors.buttonBackground }]}>
             {(expirationItems && expirationItems.length) || 0} items
           </Text>
         </View>
       
         {/* Food Items Grid */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.itemsScroll}
           contentContainerStyle={styles.itemsContainer}
         >
           {expirationItems && expirationItems.length > 0 ? (
-            expirationItems.map((item) => (
-              <View 
-                key={item.id} 
+            expirationItems.map((item: Item, index: number) => (
+              <AnimatedTouchableOpacity
+                key={item.id}
                 style={[
-                  styles.itemContainer, 
-                  { backgroundColor: colors.expiringCard }
-                ]}
-              >
-                <View style={[
-                  styles.itemImagePlaceholder,
+                  styles.itemContainer,
                   { 
-                    backgroundColor: colorScheme === 'dark' ? colors.inputBackground : '#F0F0F0',
-                    borderColor: colors.border
-                  }
-                ]} />
-                <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
-                <Text style={[styles.itemDate, { color: colors.text, opacity: 0.7 }]}>{item.expirationDate}</Text>
-              </View>
+                    backgroundColor: colors.expiringCard,
+                    transform: [{ scale: animatedValues[index] }]
+                  },
+                ]}
+                activeOpacity={0.8}
+                onPressIn={() => {
+                  Animated.spring(animatedValues[index], {
+                    toValue: 0.95,
+                    useNativeDriver: true,
+                    speed: 100,
+                  }).start();
+                }}
+                onPressOut={() => {
+                  Animated.spring(animatedValues[index], {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    speed: 100,
+                  }).start();
+                }}
+                onPress={() => {
+                  router.push(`/recipe?search=${encodeURIComponent(item.name)}`);
+                }}
+              >
+                {/* emoji/icon */}
+                <FoodItemImage item={item} colorScheme={colorScheme} colors={colors} />
+
+                {/* item name */}
+                <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+                  {item.name}
+                </Text>
+
+                {/* expiration date */}
+                <Text
+                  style={[styles.itemDate, { color: colors.text, opacity: 0.7 }]}
+                  numberOfLines={1}
+                >
+                  {item.expirationDate}
+                </Text>
+              </AnimatedTouchableOpacity>
             ))
           ) : (
-            <View style={[styles.foodCard, { alignItems: 'center', justifyContent: 'center' }]}>
+            <View
+              style={[
+                styles.foodCard,
+                { alignItems: 'center', justifyContent: 'center' },
+              ]}
+            >
               <Text style={{ color: colors.text, opacity: 0.7 }}>No items found</Text>
             </View>
           )}
-        </ScrollView>
-      
+        </ScrollView> 
+     
         <EditScreenInfo path="app/(tabs)/index.tsx" />
       </SafeAreaView>
     </SafeAreaProvider>
@@ -417,7 +557,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 70,
+    paddingTop: 35,
   },
 
   menuButton: {
@@ -589,11 +729,18 @@ const styles = StyleSheet.create({
     marginTop: 32,
     marginBottom: 16,
     backgroundColor: 'transparent',
-    gap: 160,
+    gap: 65,
   },
   expiringSoonTitle: {
     fontSize: 16,
     fontWeight: '400',
+  },
+  recipeHint: {
+    fontStyle: 'italic',
+    fontSize: 12,
+    alignSelf: 'flex-end',
+    marginBottom: 2,
+    marginLeft: 8,
   },
   itemCount: {
     fontSize: 16,
@@ -602,6 +749,7 @@ const styles = StyleSheet.create({
     paddingLeft: 24,
     minHeight: 200,
   },
+
   itemsContainer: {
     paddingRight: 24,
     paddingBottom: 16,
@@ -611,19 +759,19 @@ const styles = StyleSheet.create({
   itemContainer: {
     width: 130,
     height: 180,
-    borderRadius: 12,
+    borderRadius: 16,
     marginRight: 16,
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'flex-start',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
 
   itemImagePlaceholder: {
@@ -632,10 +780,17 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     marginBottom: 12,
     borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  emojiText: {
+    fontSize: 36,
+    textAlign: 'center',
   },
 
   itemName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     marginBottom: 4,
     textAlign: 'center',
@@ -644,12 +799,19 @@ const styles = StyleSheet.create({
   itemDate: {
     fontSize: 13,
     textAlign: 'center',
+    opacity: 0.75,
+  },
+  itemImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
 
   foodCard: {
     width: 140,
     marginRight: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
   },
 

@@ -1,10 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useColorScheme } from 'react-native'
-import { StyleSheet, ScrollView, TouchableOpacity, TextInput, View as RNView, ActivityIndicator, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
-import { useRouter } from 'expo-router';
+import { FavoriteRecipe, isFavorite, toggleFavorite } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 import { Href } from 'expo-router';
@@ -97,6 +93,10 @@ export default function RecipeTabScreen() {
   };
 
 
+  /* add for jumping from homepage expiring items with item name */
+  const params = useLocalSearchParams();
+  const initialSearch = typeof params.search === 'string' ? params.search : '';
+
 
   // Fetch recipes from TheMealDB API
   useEffect(() => {
@@ -110,6 +110,13 @@ export default function RecipeTabScreen() {
     loadFavoriteStates();
   }, [recipes]);
 
+  
+  //Set the initial search value to the search state from homepage jumping
+  useEffect(() => {
+    if (initialSearch) {
+      setSearchQuery(initialSearch);
+    }
+  }, [initialSearch]);
 
 
   const loadFavoriteStates = async () => {
