@@ -2,13 +2,33 @@ import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
 import { FavoriteRecipe, isFavorite, toggleFavorite } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
-import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 import { Href } from 'expo-router';
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { 
+  useRouter, 
+  useLocalSearchParams 
+} from 'expo-router';
 
+import { 
+  useEffect, 
+  useState, 
+} from 'react';
 
+import { 
+  useColorScheme 
+} from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  View as RNView,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Recipe {
   idMeal: string;
