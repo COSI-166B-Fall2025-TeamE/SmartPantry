@@ -26,6 +26,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Fisher–Yates shuffle
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 interface Recipe {
   idMeal: string;
   strMeal: string;
@@ -94,6 +104,10 @@ export default function RecipeTabScreen() {
   const params = useLocalSearchParams();
   const initialSearch =
     typeof params.search === 'string' ? params.search : '';
+
+  // how many recipes per ingredient at most
+  const MAX_PER_INGREDIENT_EXPIRING = 3;
+  const MAX_PER_INGREDIENT_PANTRY = 3;
 
   // Normalize a Date to local midnight (ignore time)
   const toDateOnly = (d: Date) => {
@@ -221,9 +235,11 @@ export default function RecipeTabScreen() {
           }
         }
       } else if (filterType === 'expiring') {
-        await fetchRecipesByPantryItems(expiringItems);
+        console.log('Using expiringItems for suggestions:', expiringItems);
+        await fetchRecipesByPantryItems(expiringItems, 'expiring');
       } else if (filterType === 'pantry') {
-        await fetchRecipesByPantryItems(pantryItems);
+        console.log('Using pantryItems for suggestions:', pantryItems);
+        await fetchRecipesByPantryItems(pantryItems, 'pantry');
       }
     } catch (error) {
       console.error('Error fetching recipes:', error);
@@ -233,15 +249,21 @@ export default function RecipeTabScreen() {
     }
   };
 
-  // UPDATED VERSION
-  const fetchRecipesByPantryItems = async (items: PantryItem[]) => {
+  // Randomized suggestions for both "expiring" and "pantry"
+  const fetchRecipesByPantryItems = async (
+    items: PantryItem[],
+    mode: 'expiring' | 'pantry',
+  ) => {
     if (!items || items.length === 0) {
       console.log('No pantry items, clearing recipes');
       setRecipes([]);
       return;
     }
 
-    const MAX_PER_INGREDIENT = 2;
+    const MAX_PER_INGREDIENT =
+      mode === 'expiring'
+        ? MAX_PER_INGREDIENT_EXPIRING
+        : MAX_PER_INGREDIENT_PANTRY;
 
     try {
       const allRecipes: Recipe[] = [];
@@ -249,7 +271,7 @@ export default function RecipeTabScreen() {
       for (const item of items) {
         const rawName = item.name.trim();
         console.log('---');
-        console.log(`Fetching recipes for pantry item: "${rawName}"`);
+        console.log(`Fetching recipes for ${mode} item: "${rawName}"`);
 
         const ingredientQuery = rawName.replace(/\s+/g, '_');
         let data: any = null;
@@ -302,11 +324,25 @@ export default function RecipeTabScreen() {
           continue;
         }
 
+        const totalForIngredient = data.meals.length;
         console.log(
-          `Found ${data.meals.length} recipes in filter.php for "${rawName}"`,
+          `Found ${totalForIngredient} recipes in filter.php for "${rawName}"`,
         );
 
-        const recipesToFetch = data.meals.slice(0, MAX_PER_INGREDIENT);
+        // If ingredient has >2 recipes, shuffle to randomize; otherwise keep as is.
+        const shuffledMeals =
+          totalForIngredient > 2 ? shuffleArray(data.meals) : data.meals;
+
+        if (totalForIngredient <= 2) {
+          console.log(
+            `"${rawName}" has <= 2 recipes (${totalForIngredient}), using them all (no shuffle)`,
+          );
+        }
+
+        const recipesToFetch = shuffledMeals.slice(
+          0,
+          Math.min(MAX_PER_INGREDIENT, shuffledMeals.length),
+        );
 
         const detailedMeals = await Promise.all(
           recipesToFetch.map((meal: any) => {
@@ -628,86 +664,86 @@ export default function RecipeTabScreen() {
               />
             </TouchableOpacity>
 
-            {showFilterDropdown && (
-              <View
+          {showFilterDropdown && (
+            <View
+              style={[
+                styles.dropdownMenu,
+                { backgroundColor: colors.card },
+              ]}
+            >
+              <TouchableOpacity
                 style={[
-                  styles.dropdownMenu,
-                  { backgroundColor: colors.card },
+                  styles.dropdownItem,
+                  filterType === 'random' && {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
+                  },
                 ]}
+                onPress={() => {
+                  setFilterType('random');
+                  setShowFilterDropdown(false);
+                }}
               >
-                <TouchableOpacity
+                <Ionicons name="shuffle" size={18} color={colors.text} />
+                <Text
                   style={[
-                    styles.dropdownItem,
-                    filterType === 'random' && {
-                      backgroundColor:
-                        colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
-                    },
+                    styles.dropdownText,
+                    { color: colors.text },
                   ]}
-                  onPress={() => {
-                    setFilterType('random');
-                    setShowFilterDropdown(false);
-                  }}
                 >
-                  <Ionicons name="shuffle" size={18} color={colors.text} />
-                  <Text
-                    style={[
-                      styles.dropdownText,
-                      { color: colors.text },
-                    ]}
-                  >
-                    Random Suggestions
-                  </Text>
-                </TouchableOpacity>
+                  Random Suggestions
+                </Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  filterType === 'expiring' && {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
+                  },
+                ]}
+                onPress={() => {
+                  setFilterType('expiring');
+                  setShowFilterDropdown(false);
+                }}
+              >
+                <Ionicons name="time" size={18} color={colors.text} />
+                <Text
                   style={[
-                    styles.dropdownItem,
-                    filterType === 'expiring' && {
-                      backgroundColor:
-                        colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
-                    },
+                    styles.dropdownText,
+                    { color: colors.text },
                   ]}
-                  onPress={() => {
-                    setFilterType('expiring');
-                    setShowFilterDropdown(false);
-                  }}
                 >
-                  <Ionicons name="time" size={18} color={colors.text} />
-                  <Text
-                    style={[
-                      styles.dropdownText,
-                      { color: colors.text },
-                    ]}
-                  >
-                    Expiring Soon ({expiringItems.length} items)
-                  </Text>
-                </TouchableOpacity>
+                  Expiring Soon ({expiringItems.length} items)
+                </Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  filterType === 'pantry' && {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
+                  },
+                ]}
+                onPress={() => {
+                  setFilterType('pantry');
+                  setShowFilterDropdown(false);
+                }}
+              >
+                <Ionicons name="list" size={18} color={colors.text} />
+                <Text
                   style={[
-                    styles.dropdownItem,
-                    filterType === 'pantry' && {
-                      backgroundColor:
-                        colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
-                    },
+                    styles.dropdownText,
+                    { color: colors.text },
                   ]}
-                  onPress={() => {
-                    setFilterType('pantry');
-                    setShowFilterDropdown(false);
-                  }}
                 >
-                  <Ionicons name="list" size={18} color={colors.text} />
-                  <Text
-                    style={[
-                      styles.dropdownText,
-                      { color: colors.text },
-                    ]}
-                  >
-                    My Pantry ({pantryItems.length} items)
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                  My Pantry ({pantryItems.length} items)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           </View>
 
           {/* Category Scroll */}
