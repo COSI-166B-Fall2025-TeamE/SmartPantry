@@ -2,7 +2,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/templateColors';
@@ -60,6 +60,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="index" 
       screenOptions={{
         tabBarActiveTintColor: colorScheme === 'light' ? '#371B34' : Colors[colorScheme ?? 'light'].tint,
         tabBarInactiveTintColor: '#999',
