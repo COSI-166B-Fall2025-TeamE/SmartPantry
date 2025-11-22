@@ -4,6 +4,7 @@ import type { ViewStyle, TextStyle, ImageStyle } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/lib/supabase 2';
 
 export default function OnboardingScreen() {
   const [isLoading, setIsLoading] = useState(true);
@@ -16,12 +17,21 @@ export default function OnboardingScreen() {
     try {
       const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
       
-      if (hasSeenOnboarding === 'true') {
-        // user has seen onboarding before, so go directly to home
+      // if onboarding hasn't been seen, show it regardless of login status
+      if (hasSeenOnboarding !== 'true') {
+        setIsLoading(false);
+        return;
+      }
+      
+      // only check session if onboarding has been seen
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // user is logged in and has seen onboarding, go to home
         router.replace('/(tabs)');
       } else {
-        // first time user, show onboarding
-        setIsLoading(false);
+        // user has seen onboarding but not logged in, go to login
+        router.replace('/auth/login');
       }
     } catch (error) {
       console.error('Error checking onboarding status:', error);
@@ -34,11 +44,11 @@ export default function OnboardingScreen() {
       // mark onboarding as completed
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
       // navigate to homepage
-      router.replace('/(tabs)');
+      router.replace('/auth/login');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
       // navigate anyway even if save fails
-      router.replace('/(tabs)');
+      router.replace('/auth/login');
     }
   };
 
