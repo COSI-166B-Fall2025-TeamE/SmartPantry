@@ -1,24 +1,21 @@
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
-import { FavoriteRecipe, isFavorite, toggleFavorite } from '@/lib/utils/favoritesStorage';
+import {
+  FavoriteRecipe,
+  isFavorite,
+  toggleFavorite,
+} from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
-import { Href } from 'expo-router';
+import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
-import { 
-  useRouter, 
-  useLocalSearchParams 
-} from 'expo-router';
-
-import { 
-  useEffect, 
-  useState, 
+import React,
+{
+  useCallback,
+  useEffect,
+  useState,
 } from 'react';
-
-import { 
-  useColorScheme 
-} from 'react-native';
+import { useColorScheme } from 'react-native';
 import {
   ActivityIndicator,
   Image,
@@ -27,8 +24,21 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  RefreshControl,     // 👈 ADD THIS
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+
+// Fisher–Yates shuffle
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 
 interface Recipe {
   idMeal: string;
@@ -51,87 +61,149 @@ interface Recipe {
   matchedIngredients?: string[];
 }
 
+
 interface PantryItem {
   id: string;
   name: string;
-  quantity: string;
-  expirationDate: string;
+  expirationDate: string; // "2025-11-21" from your DB
+  quantity?: string;
 }
+
 
 type FilterType = 'random' | 'expiring' | 'pantry';
 
 
-
-const CATEGORIES = ['All', 'Beef', 'Chicken', 'Dessert', 'Lamb', 'Pasta', 'Pork', 'Seafood', 'Vegetarian', 'Breakfast', 'Goat', 'Miscellaneous', 'Side', 'Starter', 'Vegan'];
-
+const CATEGORIES = [
+  'All',
+  'Beef',
+  'Chicken',
+  'Dessert',
+  'Lamb',
+  'Pasta',
+  'Pork',
+  'Seafood',
+  'Vegetarian',
+  'Breakfast',
+  'Goat',
+  'Miscellaneous',
+  'Side',
+  'Starter',
+  'Vegan',
+];
 
 
 export default function RecipeTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+
+
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ⭐ NEW: pull‑to‑refresh state
+  const [refreshing, setRefreshing] = useState(false);
+
   const [favoriteStates, setFavoriteStates] = useState<{ [key: string]: boolean }>({});
   const [filterType, setFilterType] = useState<FilterType>('random');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
   const [expiringItems, setExpiringItems] = useState<PantryItem[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
+  const params = useLocalSearchParams();
+  const initialSearch =
+    typeof params.search === 'string' ? params.search : '';
 
-  // Refresh data when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      console.log('Recipe screen focused - refreshing data');
-      loadPantryItems();
-      setRefreshTrigger(prev => prev + 1);
-    }, [])
-  );
 
-  const loadPantryItems = async () => {
-    const pantryResult = await fetchAllData('expiration');
-    const items = pantryResult.data || [];
-    setPantryItems(items);
-    
-    // Calculate expiring items
-    const today = new Date();
-    const weekFromNow = new Date();
-    weekFromNow.setDate(today.getDate() + 7);
+  // how many recipes per ingredient at most
+  const MAX_PER_INGREDIENT_EXPIRING = 3;
+  const MAX_PER_INGREDIENT_PANTRY = 3;
 
-    const expiring = items.filter(item => {
-      const expirationDate = new Date(item.expirationDate);
-      return expirationDate >= today && expirationDate <= weekFromNow;
-    });
-    
-    setExpiringItems(expiring);
-    console.log('Pantry items loaded:', items.length);
-    console.log('Expiring items:', expiring.length);
+
+  // Normalize a Date to local midnight (ignore time)
+  const toDateOnly = (d: Date) => {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   };
 
 
-  /* add for jumping from homepage expiring items with item name */
-  const params = useLocalSearchParams();
-  const initialSearch = typeof params.search === 'string' ? params.search : '';
+  // Load pantry items (same pattern as on home)
+  const loadPantryItems = async () => {
+    const result = await fetchAllData('expiration');
+    if ((result as any).success) {
+      const items = (result as any).data as PantryItem[];
+      setPantryItems(items);
 
 
-  // Fetch recipes from TheMealDB API
+      console.log('Here are the items', items);
+
+
+      const today = toDateOnly(new Date());
+      const weekFromNow = toDateOnly(
+        new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7),
+      );
+
+
+      console.log('Today (date-only):', today);
+      console.log('Week from now (date-only):', weekFromNow);
+
+
+      const expiring = items.filter((item) => {
+        const raw = item.expirationDate?.split('T')[0] ?? item.expirationDate;
+        const parsed = new Date(raw);
+
+
+        if (isNaN(parsed.getTime())) {
+          console.warn('Could not parse expirationDate for item', item);
+          return false;
+        }
+
+
+        const dateOnly = toDateOnly(parsed);
+
+
+        return dateOnly >= today && dateOnly <= weekFromNow;
+      });
+
+
+      setExpiringItems(expiring);
+      console.log('Expiring soon items', expiring);
+    } else {
+      console.error('Error loading items:', (result as any).error);
+      setPantryItems([]);
+      setExpiringItems([]);
+    }
+  };
+
+
+  // Refresh pantry when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      loadPantryItems();
+      setRefreshTrigger((prev) => prev + 1);
+    }, []),
+  );
+
+
+  // Fetch recipes when pantry/filters change
   useEffect(() => {
     fetchRecipes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, filterType, refreshTrigger]);
 
 
-
-  // Load favorite states for current recipes
+  // Load favorites whenever recipes list changes
   useEffect(() => {
     loadFavoriteStates();
   }, [recipes]);
 
-  
-  //Set the initial search value to the search state from homepage jumping
+
+  // Apply initial search from home navigation
   useEffect(() => {
     if (initialSearch) {
       setSearchQuery(initialSearch);
@@ -148,136 +220,256 @@ export default function RecipeTabScreen() {
   };
 
 
-
   const fetchRecipes = async () => {
+    // Keep internal loading separate from pull‑to‑refresh
     setLoading(true);
     try {
       if (filterType === 'random') {
-        // Original random fetch logic
         if (selectedCategory === 'All') {
           const randomMeals = await Promise.all(
-            Array.from({ length: 12 }, () => 
-              fetch('https://www.themealdb.com/api/json/v1/1/random.php')
-                .then(res => res.json())
-            )
+            Array.from({ length: 12 }, () =>
+              fetch('https://www.themealdb.com/api/json/v1/1/random.php').then(
+                (res) => res.json(),
+              ),
+            ),
           );
-          
+
+
           const formattedRecipes = randomMeals
-            .filter(result => result.meals && result.meals[0])
-            .map(result => formatRecipe(result.meals[0]));
-          
+            .filter((result) => result.meals && result.meals[0])
+            .map((result) => formatRecipe(result.meals[0]));
+
+
           const uniqueRecipes = Array.from(
-            new Map(formattedRecipes.map(recipe => [recipe.idMeal, recipe])).values()
+            new Map(formattedRecipes.map((r) => [r.idMeal, r])).values(),
           );
-          
+
+
           setRecipes(uniqueRecipes);
         } else {
-          const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`);
+          const response = await fetch(
+            `https://www.themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`,
+          );
           const data = await response.json();
-          
+
+
           if (data.meals) {
             const detailedMeals = await Promise.all(
-              data.meals.slice(0, 12).map((meal: any) => 
-                fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
-                  .then(res => res.json())
-              )
+              data.meals.slice(0, 12).map((meal: any) =>
+                fetch(
+                  `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`,
+                ).then((res) => res.json()),
+              ),
             );
-            
+
+
             const formattedRecipes = detailedMeals
-              .filter(result => result.meals && result.meals[0])
-              .map(result => formatRecipe(result.meals[0]));
-            
+              .filter((result) => result.meals && result.meals[0])
+              .map((result) => formatRecipe(result.meals[0]));
+
+
             setRecipes(formattedRecipes);
           } else {
             setRecipes([]);
           }
         }
       } else if (filterType === 'expiring') {
-        // Fetch 2 recipes per expiring item
-        await fetchRecipesByPantryItems(expiringItems);
+        console.log('Using expiringItems for suggestions:', expiringItems);
+        await fetchRecipesByPantryItems(expiringItems, 'expiring');
       } else if (filterType === 'pantry') {
-        // Fetch 2 recipes per pantry item
-        await fetchRecipesByPantryItems(pantryItems);
+        console.log('Using pantryItems for suggestions:', pantryItems);
+        await fetchRecipesByPantryItems(pantryItems, 'pantry');
       }
     } catch (error) {
       console.error('Error fetching recipes:', error);
       setRecipes([]);
     } finally {
       setLoading(false);
+      setRefreshing(false); // 👈 ensure pull‑to‑refresh spinner stops
     }
   };
 
-  const fetchRecipesByPantryItems = async (items: PantryItem[]) => {
-    if (items.length === 0) {
+
+  // ⭐ NEW: handler used by RefreshControl
+  const onPullToRefresh = useCallback(() => {
+    // This shows the spinner at the top
+    setRefreshing(true);
+
+    // Optionally clear search so it fully re‑randomizes
+    // setSearchQuery('');
+
+    // Re‑use your existing logic (filterType, category, pantry, etc.)
+    fetchRecipes();
+  }, [filterType, selectedCategory, expiringItems, pantryItems]);
+
+
+  // Randomized suggestions for both "expiring" and "pantry"
+  const fetchRecipesByPantryItems = async (
+    items: PantryItem[],
+    mode: 'expiring' | 'pantry',
+  ) => {
+    if (!items || items.length === 0) {
+      console.log('No pantry items, clearing recipes');
       setRecipes([]);
       return;
     }
 
+
+    const MAX_PER_INGREDIENT =
+      mode === 'expiring'
+        ? MAX_PER_INGREDIENT_EXPIRING
+        : MAX_PER_INGREDIENT_PANTRY;
+
+
     try {
       const allRecipes: Recipe[] = [];
-      
+
+
       for (const item of items) {
-        console.log(`Fetching recipes for: ${item.name}`);
-        
-        // Search by ingredient
-        const ingredientQuery = item.name.trim().replace(/\s+/g, '_');
-        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`);
-        const data = await response.json();
-        
-        if (data.meals && data.meals.length > 0) {
-          console.log(`Found ${data.meals.length} recipes for ${item.name}`);
-          
-          // Get up to 2 recipes for this ingredient
-          const recipesToFetch = data.meals.slice(0, 2);
-          
-          const detailedMeals = await Promise.all(
-            recipesToFetch.map((meal: any) => 
-              fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
-                .then(res => res.json())
-                .catch(err => {
-                  console.error(`Error fetching recipe ${meal.idMeal}:`, err);
-                  return null;
-                })
-            )
-          );
-          
-          const formattedRecipes = detailedMeals
-            .filter(result => result && result.meals && result.meals[0])
-            .map(result => {
-              const recipe = formatRecipe(result.meals[0]);
-              // Mark this recipe with the matched ingredient
-              recipe.matchedIngredients = [item.name];
-              return recipe;
-            });
-          
-          console.log(`Successfully formatted ${formattedRecipes.length} recipes for ${item.name}`);
-          allRecipes.push(...formattedRecipes);
-        } else {
-          console.log(`No recipes found for ${item.name}`);
+        const rawName = item.name.trim();
+        console.log('---');
+        console.log(`Fetching recipes for ${mode} item: "${rawName}"`);
+
+
+        const ingredientQuery = rawName.replace(/\s+/g, '_');
+        let data: any = null;
+
+
+        const fetchByIngredient = async (q: string) => {
+          const url = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(
+            q,
+          )}`;
+          console.log('Calling filter.php with:', url);
+          const res = await fetch(url);
+          return res.json();
+        };
+
+
+        // 1) Try exact ingredientQuery
+        try {
+          data = await fetchByIngredient(ingredientQuery);
+        } catch (e) {
+          console.error('Error calling filter.php for', ingredientQuery, e);
         }
+
+
+        // 2) If nothing, try a simple plural/singular tweak
+        if (!data?.meals || data.meals.length === 0) {
+          let alt = rawName;
+          if (alt.toLowerCase().endsWith('y')) {
+            alt = alt.slice(0, -1) + 'ies';
+          } else if (alt.toLowerCase().endsWith('ies')) {
+            alt = alt.slice(0, -3) + 'y';
+          } else if (alt.toLowerCase().endsWith('s')) {
+            alt = alt.slice(0, -1);
+          } else {
+            alt = `${alt}s`;
+          }
+
+
+          const altQuery = alt.replace(/\s+/g, '_');
+          console.log(
+            `No meals for "${ingredientQuery}", trying alt ingredient name "${altQuery}"`,
+          );
+          try {
+            const altData = await fetchByIngredient(altQuery);
+            if (altData?.meals && altData.meals.length > 0) {
+              data = altData;
+            }
+          } catch (e) {
+            console.error('Error calling filter.php for alt', altQuery, e);
+          }
+        }
+
+
+        if (!data?.meals || data.meals.length === 0) {
+          console.log(`No recipes found for "${rawName}" after all attempts`);
+          continue;
+        }
+
+
+        const totalForIngredient = data.meals.length;
+        console.log(
+          `Found ${totalForIngredient} recipes in filter.php for "${rawName}"`,
+        );
+
+
+        // If ingredient has >2 recipes, shuffle to randomize; otherwise keep as is.
+        const shuffledMeals =
+          totalForIngredient > 2 ? shuffleArray(data.meals) : data.meals;
+
+
+        if (totalForIngredient <= 2) {
+          console.log(
+            `"${rawName}" has <= 2 recipes (${totalForIngredient}), using them all (no shuffle)`,
+          );
+        }
+
+
+        const recipesToFetch = shuffledMeals.slice(
+          0,
+          Math.min(MAX_PER_INGREDIENT, shuffledMeals.length),
+        );
+
+
+        const detailedMeals = await Promise.all(
+          recipesToFetch.map((meal: any) => {
+            const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`;
+            console.log('  lookup.php for id:', meal.idMeal, url);
+            return fetch(url)
+              .then((res) => res.json())
+              .catch((err) => {
+                console.error(`Error fetching recipe ${meal.idMeal}:`, err);
+                return null;
+              });
+          }),
+        );
+
+
+        const formattedRecipes = detailedMeals
+          .filter((result) => {
+            const ok = result && result.meals && result.meals[0];
+            if (!ok) {
+              console.warn('  lookup.php returned no meals, skipping one entry');
+            }
+            return ok;
+          })
+          .map((result) => {
+            const recipe = formatRecipe(result.meals[0]);
+            recipe.matchedIngredients = [rawName];
+            return recipe;
+          });
+
+
+        console.log(
+          `Successfully formatted ${formattedRecipes.length} recipes for "${rawName}"`,
+        );
+        allRecipes.push(...formattedRecipes);
       }
-      
+
+
       console.log(`Total recipes before deduplication: ${allRecipes.length}`);
-      
-      // Remove duplicates and combine matched ingredients
+
+
       const recipeMap = new Map<string, Recipe>();
-      allRecipes.forEach(recipe => {
+      allRecipes.forEach((recipe) => {
         if (recipeMap.has(recipe.idMeal)) {
-          // Recipe already exists, add matched ingredient
           const existing = recipeMap.get(recipe.idMeal)!;
           if (recipe.matchedIngredients) {
             existing.matchedIngredients = [
               ...(existing.matchedIngredients || []),
-              ...recipe.matchedIngredients
+              ...recipe.matchedIngredients,
             ];
           }
         } else {
           recipeMap.set(recipe.idMeal, recipe);
         }
       });
-      
+
+
       const finalRecipes = Array.from(recipeMap.values());
-      console.log(`Total unique recipes: ${finalRecipes.length}`);
+      console.log(`Total unique recipes after merge: ${finalRecipes.length}`);
+      console.log('Recipes state will be set with length:', finalRecipes.length);
       setRecipes(finalRecipes);
     } catch (error) {
       console.error('Error fetching recipes by pantry items:', error);
@@ -286,20 +478,24 @@ export default function RecipeTabScreen() {
   };
 
 
-
   const formatRecipe = (meal: any): Recipe => {
     const ingredients = [];
     for (let i = 1; i <= 20; i++) {
       const ingredient = meal[`strIngredient${i}`];
       const measure = meal[`strMeasure${i}`];
-      
+
+
       if (ingredient && ingredient.trim() && ingredient !== 'null') {
         ingredients.push({
           ingredient: ingredient.trim(),
-          measure: measure && measure.trim() && measure !== 'null' ? measure.trim() : '',
+          measure:
+            measure && measure.trim() && measure !== 'null'
+              ? measure.trim()
+              : '',
         });
       }
     }
+
 
     return {
       idMeal: meal.idMeal,
@@ -320,47 +516,60 @@ export default function RecipeTabScreen() {
   };
 
 
-
-  // Search recipes by name AND ingredient simultaneously
   const handleSearch = async (query: string) => {
     if (query.length >= 3) {
       setLoading(true);
       try {
-        const nameSearchPromise = fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`)
-          .then(res => res.json());
-        
+        const nameSearchPromise = fetch(
+          `https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`,
+        ).then((res) => res.json());
+
+
         const ingredientQuery = query.replace(/\s+/g, '_');
-        const ingredientSearchPromise = fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`)
-          .then(res => res.json());
-        
-        const [nameData, ingredientData] = await Promise.all([nameSearchPromise, ingredientSearchPromise]);
-        
+        const ingredientSearchPromise = fetch(
+          `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`,
+        ).then((res) => res.json());
+
+
+        const [nameData, ingredientData] = await Promise.all([
+          nameSearchPromise,
+          ingredientSearchPromise,
+        ]);
+
+
         let allRecipes: Recipe[] = [];
-        
+
+
         if (nameData.meals) {
           const nameRecipes = nameData.meals.map(formatRecipe);
           allRecipes = [...allRecipes, ...nameRecipes];
         }
-        
+
+
         if (ingredientData.meals) {
           const detailedMeals = await Promise.all(
-            ingredientData.meals.slice(0, 12).map((meal: any) => 
-              fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`)
-                .then(res => res.json())
-            )
+            ingredientData.meals.slice(0, 12).map((meal: any) =>
+              fetch(
+                `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`,
+              ).then((res) => res.json()),
+            ),
           );
-          
+
+
           const ingredientRecipes = detailedMeals
-            .filter(result => result.meals && result.meals[0])
-            .map(result => formatRecipe(result.meals[0]));
-          
+            .filter((result) => result.meals && result.meals[0])
+            .map((result) => formatRecipe(result.meals[0]));
+
+
           allRecipes = [...allRecipes, ...ingredientRecipes];
         }
-        
+
+
         const uniqueRecipes = Array.from(
-          new Map(allRecipes.map(recipe => [recipe.idMeal, recipe])).values()
+          new Map(allRecipes.map((recipe) => [recipe.idMeal, recipe])).values(),
         );
-        
+
+
         setRecipes(uniqueRecipes);
       } catch (error) {
         console.error('Error searching recipes:', error);
@@ -374,8 +583,6 @@ export default function RecipeTabScreen() {
   };
 
 
-
-  // Debounce search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery.length >= 3 || searchQuery.length === 0) {
@@ -383,27 +590,30 @@ export default function RecipeTabScreen() {
       }
     }, 500);
 
+
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
 
-
-  // Filter recipes locally for shorter queries
-  const displayedRecipes = searchQuery.length > 0 && searchQuery.length < 3
-    ? recipes.filter(recipe => 
-        recipe.strMeal.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        recipe.ingredients.some(ing => 
-          ing.ingredient.toLowerCase().includes(searchQuery.toLowerCase())
+  const displayedRecipes =
+    searchQuery.length > 0 && searchQuery.length < 3
+      ? recipes.filter(
+          (recipe) =>
+            recipe.strMeal
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase()) ||
+            recipe.ingredients.some((ing) =>
+              ing.ingredient.toLowerCase().includes(searchQuery.toLowerCase()),
+            ),
         )
-      )
-    : recipes;
+      : recipes;
 
 
-
-  // Handle favorite toggle
   const handleFavoriteToggle = async (recipe: Recipe, event: any) => {
     event.stopPropagation();
-    
+
+
     try {
       const favoriteRecipe: FavoriteRecipe = {
         idMeal: recipe.idMeal,
@@ -412,17 +622,20 @@ export default function RecipeTabScreen() {
         strCategory: recipe.strCategory,
         strArea: recipe.strArea,
       };
-      
+
+
       const newFavoriteState = await toggleFavorite(favoriteRecipe);
-      
-      setFavoriteStates(prev => ({
+
+
+      setFavoriteStates((prev) => ({
         ...prev,
-        [recipe.idMeal]: newFavoriteState
+        [recipe.idMeal]: newFavoriteState,
       }));
     } catch (error) {
       console.error('Error toggling favorite:', error);
     }
   };
+
 
   const getFilterLabel = () => {
     switch (filterType) {
@@ -437,57 +650,70 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   return (
-    <SafeAreaView 
-      style={[
-        styles.safeArea, 
-        { backgroundColor: colors.background }
-      ]} 
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
       edges={['top', 'left', 'right']}
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text style={styles.title}>Recipe Recommendations</Text>
           <Text style={styles.subtitle}>Discover delicious meals</Text>
-          
+
+
           <RNView style={styles.headerButtonContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.headerButton,
-                { backgroundColor: colors.buttonBackground }
+                { backgroundColor: colors.buttonBackground },
               ]}
               onPress={() => router.push('/favorites' as Href)}
             >
               <Ionicons name="heart" size={20} color={colors.buttonText} />
-              <Text style={[styles.headerButtonText, { color: colors.buttonText }]}>
+              <Text
+                style={[
+                  styles.headerButtonText,
+                  { color: colors.buttonText },
+                ]}
+              >
                 My Favorites
               </Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+
+            <TouchableOpacity
               style={[
                 styles.headerButton,
-                { backgroundColor: colors.buttonBackground }
+                { backgroundColor: colors.buttonBackground },
               ]}
               onPress={() => router.push('/my-recipes' as Href)}
             >
               <Ionicons name="restaurant" size={20} color={colors.buttonText} />
-              <Text style={[styles.headerButtonText, { color: colors.buttonText }]}>
+              <Text
+                style={[
+                  styles.headerButtonText,
+                  { color: colors.buttonText },
+                ]}
+              >
                 My Recipes
               </Text>
             </TouchableOpacity>
           </RNView>
         </View>
-        
+
+
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
+        <View
+          style={[styles.searchContainer, { backgroundColor: colors.background }]}
+        >
           <TextInput
             style={[
               styles.searchInput,
-              { 
+              {
                 backgroundColor: colors.searchBar,
-                color: colors.text
-              }
+                color: colors.text,
+              },
             ]}
             placeholder="Search by recipe name or ingredient (min 3 chars)"
             placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
@@ -497,7 +723,7 @@ export default function RecipeTabScreen() {
             autoCorrect={false}
           />
           {searchQuery !== '' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.clearButton}
               onPress={() => setSearchQuery('')}
             >
@@ -505,84 +731,127 @@ export default function RecipeTabScreen() {
             </TouchableOpacity>
           )}
         </View>
-        
-        {/* Category Filter with Filter Dropdown */}
-        <View style={[styles.filterRow, { backgroundColor: colors.background }]}>
-          {/* Filter Dropdown Button */}
+
+
+        {/* Filter Row */}
+        <View
+          style={[styles.filterRow, { backgroundColor: colors.background }]}
+        >
+          {/* Filter Dropdown */}
           <View style={styles.filterDropdownContainer}>
             <TouchableOpacity
               style={[
                 styles.filterButton,
-                { backgroundColor: colors.buttonBackground }
+                { backgroundColor: colors.buttonBackground },
               ]}
               onPress={() => setShowFilterDropdown(!showFilterDropdown)}
             >
               <Ionicons name="filter" size={16} color={colors.buttonText} />
-              <Text style={[styles.filterButtonText, { color: colors.buttonText }]} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  { color: colors.buttonText },
+                ]}
+                numberOfLines={1}
+              >
                 {getFilterLabel()}
               </Text>
-              <Ionicons 
-                name={showFilterDropdown ? "chevron-up" : "chevron-down"} 
-                size={16} 
-                color={colors.buttonText} 
+              <Ionicons
+                name={showFilterDropdown ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.buttonText}
               />
             </TouchableOpacity>
 
-            {/* Dropdown Menu */}
-            {showFilterDropdown && (
-              <View style={[styles.dropdownMenu, { backgroundColor: colors.card }]}>
-                <TouchableOpacity
-                  style={[
-                    styles.dropdownItem,
-                    filterType === 'random' && { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3' }
-                  ]}
-                  onPress={() => {
-                    setFilterType('random');
-                    setShowFilterDropdown(false);
-                  }}
-                >
-                  <Ionicons name="shuffle" size={18} color={colors.text} />
-                  <Text style={[styles.dropdownText, { color: colors.text }]}>Random Suggestions</Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity
+          {showFilterDropdown && (
+            <View
+              style={[
+                styles.dropdownMenu,
+                { backgroundColor: colors.card },
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  filterType === 'random' && {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
+                  },
+                ]}
+                onPress={() => {
+                  setFilterType('random');
+                  setShowFilterDropdown(false);
+                }}
+              >
+                <Ionicons name="shuffle" size={18} color={colors.text} />
+                <Text
                   style={[
-                    styles.dropdownItem,
-                    filterType === 'expiring' && { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3' }
+                    styles.dropdownText,
+                    { color: colors.text },
                   ]}
-                  onPress={() => {
-                    setFilterType('expiring');
-                    setShowFilterDropdown(false);
-                  }}
                 >
-                  <Ionicons name="time" size={18} color={colors.text} />
-                  <Text style={[styles.dropdownText, { color: colors.text }]}>
-                    Expiring Soon ({expiringItems.length} items)
-                  </Text>
-                </TouchableOpacity>
+                  Random Suggestions
+                </Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
+
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  filterType === 'expiring' && {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
+                  },
+                ]}
+                onPress={() => {
+                  setFilterType('expiring');
+                  setShowFilterDropdown(false);
+                }}
+              >
+                <Ionicons name="time" size={18} color={colors.text} />
+                <Text
                   style={[
-                    styles.dropdownItem,
-                    filterType === 'pantry' && { backgroundColor: colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3' }
+                    styles.dropdownText,
+                    { color: colors.text },
                   ]}
-                  onPress={() => {
-                    setFilterType('pantry');
-                    setShowFilterDropdown(false);
-                  }}
                 >
-                  <Ionicons name="list" size={18} color={colors.text} />
-                  <Text style={[styles.dropdownText, { color: colors.text }]}>
-                    My Pantry ({pantryItems.length} items)
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                  Expiring Soon ({expiringItems.length} items)
+                </Text>
+              </TouchableOpacity>
+
+
+              <TouchableOpacity
+                style={[
+                  styles.dropdownItem,
+                  filterType === 'pantry' && {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#4A4E6B' : '#E8E9F3',
+                  },
+                ]}
+                onPress={() => {
+                  setFilterType('pantry');
+                  setShowFilterDropdown(false);
+                }}
+              >
+                <Ionicons name="list" size={18} color={colors.text} />
+                <Text
+                  style={[
+                    styles.dropdownText,
+                    { color: colors.text },
+                  ]}
+                >
+                  My Pantry ({pantryItems.length} items)
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           </View>
 
+
           {/* Category Scroll */}
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.categoryScroll}
             contentContainerStyle={styles.categoryContent}
@@ -593,24 +862,32 @@ export default function RecipeTabScreen() {
                 style={[
                   styles.categoryChip,
                   {
-                    backgroundColor: selectedCategory === category 
-                      ? colors.buttonBackground 
-                      : (colorScheme === 'dark' ? '#4A4E6B' : '#CDD0E3')
-                  }
+                    backgroundColor:
+                      selectedCategory === category
+                        ? colors.buttonBackground
+                        : colorScheme === 'dark'
+                        ? '#4A4E6B'
+                        : '#CDD0E3',
+                  },
                 ]}
                 onPress={() => {
                   setSelectedCategory(category);
                   setSearchQuery('');
                 }}
               >
-                <Text style={[
-                  styles.categoryText,
-                  {
-                    color: selectedCategory === category 
-                      ? colors.buttonText 
-                      : (colorScheme === 'dark' ? '#fff' : '#371B34')
-                  }
-                ]}>
+                <Text
+                  style={[
+                    styles.categoryText,
+                    {
+                      color:
+                        selectedCategory === category
+                          ? colors.buttonText
+                          : colorScheme === 'dark'
+                          ? '#fff'
+                          : '#371B34',
+                    },
+                  ]}
+                >
                   {category}
                 </Text>
               </TouchableOpacity>
@@ -618,94 +895,169 @@ export default function RecipeTabScreen() {
           </ScrollView>
         </View>
 
+
         {/* Recipe List */}
         {loading ? (
-          <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+          <View
+            style={[
+              styles.loadingContainer,
+              { backgroundColor: colors.background },
+            ]}
+          >
             <ActivityIndicator size="large" color={colors.buttonBackground} />
             <Text style={styles.loadingText}>Loading recipes...</Text>
           </View>
         ) : (
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            <View style={[styles.recipeGrid, { backgroundColor: colors.background }]}>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+            // ⭐ NEW: attach RefreshControl here
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onPullToRefresh}
+                tintColor={colors.buttonBackground}
+                colors={[colors.buttonBackground]}
+              />
+            }
+          >
+            <View
+              style={[
+                styles.recipeGrid,
+                { backgroundColor: colors.background },
+              ]}
+            >
               {displayedRecipes.length > 0 ? (
-                displayedRecipes.map((recipe) => {
-                  return (
-                    <TouchableOpacity 
-                      key={recipe.idMeal} 
-                      style={styles.recipeCard}
-                      onPress={() => router.push(`/recipe/${recipe.idMeal}`)}
-                    >
-                      <View style={styles.recipeImageContainer}>
-                        <Image 
-                          source={{ uri: recipe.strMealThumb }}
-                          style={styles.recipeImage}
-                          resizeMode="cover"
-                        />
-                        
-                        <TouchableOpacity
-                          style={styles.heartButton}
-                          onPress={(e) => handleFavoriteToggle(recipe, e)}
-                        >
-                          <Ionicons 
-                            name={favoriteStates[recipe.idMeal] ? "heart" : "heart-outline"} 
-                            size={24} 
-                            color={favoriteStates[recipe.idMeal] ? "#FF3B30" : "#fff"} 
-                          />
-                        </TouchableOpacity>
-                      </View>
-                      
-                      <View style={[
-                        styles.recipeInfo, 
-                        { backgroundColor: colorScheme === 'light' ? 'rgba(128, 128, 128, 0.05)' : colors.card }
-                      ]}>
-                        <Text style={styles.recipeName} numberOfLines={2}>
-                          {recipe.strMeal}
-                        </Text>
-                        
-                        <RNView style={styles.recipeDetails}>
-                          <RNView style={styles.detailItem}>
-                            <Text style={styles.detailIcon}>🌍</Text>
-                            <Text style={[styles.detailText, { color: colors.text }]}>{recipe.strArea}</Text>
-                          </RNView>
-                          
-                          <RNView style={styles.badgesContainer}>
-                            <RNView style={[
-                              styles.categoryBadge,
-                              { backgroundColor: colorScheme === 'dark' ? '#146ef5' : 'rgba(0, 122, 255, 0.1)' }
-                            ]}>
-                              <Text style={[
-                                styles.categoryBadgeText,
-                                { color: colorScheme === 'dark' ? '#fff' : '#007AFF' }
-                              ]}>{recipe.strCategory}</Text>
-                            </RNView>
+                displayedRecipes.map((recipe) => (
+                  <TouchableOpacity
+                    key={recipe.idMeal}
+                    style={styles.recipeCard}
+                    onPress={() =>
+                      router.push(`/recipe/${recipe.idMeal}` as Href)
+                    }
+                  >
+                    <View style={styles.recipeImageContainer}>
+                      <Image
+                        source={{ uri: recipe.strMealThumb }}
+                        style={styles.recipeImage}
+                        resizeMode="cover"
+                      />
 
-                            {/* Matched Ingredients Badges - Right next to category badge */}
-                            {recipe.matchedIngredients && recipe.matchedIngredients.length > 0 && (
-                              recipe.matchedIngredients.map((ingredient, index) => (
-                                <RNView 
+
+                      <TouchableOpacity
+                        style={styles.heartButton}
+                        onPress={(e) => handleFavoriteToggle(recipe, e)}
+                      >
+                        <Ionicons
+                          name={
+                            favoriteStates[recipe.idMeal]
+                              ? 'heart'
+                              : 'heart-outline'
+                          }
+                          size={24}
+                          color={
+                            favoriteStates[recipe.idMeal] ? '#FF3B30' : '#fff'
+                          }
+                        />
+                      </TouchableOpacity>
+                    </View>
+
+
+                    <View
+                      style={[
+                        styles.recipeInfo,
+                        {
+                          backgroundColor:
+                            colorScheme === 'light'
+                              ? 'rgba(128, 128, 128, 0.05)'
+                              : colors.card,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.recipeName} numberOfLines={2}>
+                        {recipe.strMeal}
+                      </Text>
+
+
+                      <RNView style={styles.recipeDetails}>
+                        <RNView style={styles.detailItem}>
+                          <Text style={styles.detailIcon}>🌍</Text>
+                          <Text
+                            style={[
+                              styles.detailText,
+                              { color: colors.text },
+                            ]}
+                          >
+                            {recipe.strArea}
+                          </Text>
+                        </RNView>
+
+
+                        <RNView style={styles.badgesContainer}>
+                          <RNView
+                            style={[
+                              styles.categoryBadge,
+                              {
+                                backgroundColor:
+                                  colorScheme === 'dark'
+                                    ? '#146ef5'
+                                    : 'rgba(0, 122, 255, 0.1)',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.categoryBadgeText,
+                                {
+                                  color:
+                                    colorScheme === 'dark'
+                                      ? '#fff'
+                                      : '#007AFF',
+                                },
+                              ]}
+                            >
+                              {recipe.strCategory}
+                            </Text>
+                          </RNView>
+
+
+                          {recipe.matchedIngredients &&
+                            recipe.matchedIngredients.length > 0 &&
+                            recipe.matchedIngredients.map(
+                              (ingredient, index) => (
+                                <RNView
                                   key={`${recipe.idMeal}-${ingredient}-${index}`}
                                   style={styles.matchedIngredientBadge}
                                 >
-                                  <Ionicons name="checkmark-circle" size={12} color="#fff" />
+                                  <Ionicons
+                                    name="checkmark-circle"
+                                    size={12}
+                                    color="#fff"
+                                  />
                                   <Text style={styles.matchedIngredientText}>
                                     {ingredient}
                                   </Text>
                                 </RNView>
-                              ))
+                              ),
                             )}
-                          </RNView>
                         </RNView>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
+                      </RNView>
+                    </View>
+                  </TouchableOpacity>
+                ))
               ) : (
-                <View style={[styles.emptyState, { backgroundColor: colors.background }]}>
+                <View
+                  style={[
+                    styles.emptyState,
+                    { backgroundColor: colors.background },
+                  ]}
+                >
                   <Text style={styles.emptyStateText}>No recipes found</Text>
                   <Text style={styles.emptyStateSubtext}>
-                    {searchQuery.length > 0 && searchQuery.length < 3 
+                    {searchQuery.length > 0 && searchQuery.length < 3
                       ? 'Type at least 3 characters to search'
-                      : filterType === 'expiring' && expiringItems.length === 0
+                      : filterType === 'expiring' &&
+                        expiringItems.length === 0
                       ? 'No items expiring soon in your pantry'
                       : filterType === 'pantry' && pantryItems.length === 0
                       ? 'No items in your pantry'
@@ -720,6 +1072,7 @@ export default function RecipeTabScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -811,7 +1164,6 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    flex: 1,
   },
   dropdownMenu: {
     position: 'absolute',
