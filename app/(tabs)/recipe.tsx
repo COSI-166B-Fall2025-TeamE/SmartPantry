@@ -107,7 +107,6 @@ export default function RecipeTabScreen() {
       const items = (result as any).data as PantryItem[];
       setPantryItems(items);
 
-      // LOG: see what comes back
       console.log('Here are the items', items);
 
       const today = toDateOnly(new Date());
@@ -119,7 +118,6 @@ export default function RecipeTabScreen() {
       console.log('Week from now (date-only):', weekFromNow);
 
       const expiring = items.filter((item) => {
-        // handle possible "YYYY-MM-DDTHH:mm:ss" by splitting at "T"
         const raw = item.expirationDate?.split('T')[0] ?? item.expirationDate;
         const parsed = new Date(raw);
 
@@ -235,55 +233,115 @@ export default function RecipeTabScreen() {
     }
   };
 
+  // UPDATED VERSION
   const fetchRecipesByPantryItems = async (items: PantryItem[]) => {
     if (!items || items.length === 0) {
+      console.log('No pantry items, clearing recipes');
       setRecipes([]);
       return;
     }
+
+    const MAX_PER_INGREDIENT = 2;
 
     try {
       const allRecipes: Recipe[] = [];
 
       for (const item of items) {
-        console.log(`Fetching recipes for: ${item.name}`);
+        const rawName = item.name.trim();
+        console.log('---');
+        console.log(`Fetching recipes for pantry item: "${rawName}"`);
 
-        const ingredientQuery = item.name.trim().replace(/\s+/g, '_');
-        const response = await fetch(
-          `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`,
-        );
-        const data = await response.json();
+        const ingredientQuery = rawName.replace(/\s+/g, '_');
+        let data: any = null;
 
-        if (data.meals && data.meals.length > 0) {
-          console.log(`Found ${data.meals.length} recipes for ${item.name}`);
+        const fetchByIngredient = async (q: string) => {
+          const url = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(
+            q,
+          )}`;
+          console.log('Calling filter.php with:', url);
+          const res = await fetch(url);
+          return res.json();
+        };
 
-          const recipesToFetch = data.meals.slice(0, 2);
-
-          const detailedMeals = await Promise.all(
-            recipesToFetch.map((meal: any) =>
-              fetch(
-                `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`,
-              )
-                .then((res) => res.json())
-                .catch((err) => {
-                  console.error(`Error fetching recipe ${meal.idMeal}:`, err);
-                  return null;
-                }),
-            ),
-          );
-
-          const formattedRecipes = detailedMeals
-            .filter((result) => result && result.meals && result.meals[0])
-            .map((result) => {
-              const recipe = formatRecipe(result.meals[0]);
-              recipe.matchedIngredients = [item.name];
-              return recipe;
-            });
-
-          allRecipes.push(...formattedRecipes);
-        } else {
-          console.log(`No recipes found for ${item.name}`);
+        // 1) Try exact ingredientQuery
+        try {
+          data = await fetchByIngredient(ingredientQuery);
+        } catch (e) {
+          console.error('Error calling filter.php for', ingredientQuery, e);
         }
+
+        // 2) If nothing, try a simple plural/singular tweak
+        if (!data?.meals || data.meals.length === 0) {
+          let alt = rawName;
+          if (alt.toLowerCase().endsWith('y')) {
+            alt = alt.slice(0, -1) + 'ies';
+          } else if (alt.toLowerCase().endsWith('ies')) {
+            alt = alt.slice(0, -3) + 'y';
+          } else if (alt.toLowerCase().endsWith('s')) {
+            alt = alt.slice(0, -1);
+          } else {
+            alt = `${alt}s`;
+          }
+
+          const altQuery = alt.replace(/\s+/g, '_');
+          console.log(
+            `No meals for "${ingredientQuery}", trying alt ingredient name "${altQuery}"`,
+          );
+          try {
+            const altData = await fetchByIngredient(altQuery);
+            if (altData?.meals && altData.meals.length > 0) {
+              data = altData;
+            }
+          } catch (e) {
+            console.error('Error calling filter.php for alt', altQuery, e);
+          }
+        }
+
+        if (!data?.meals || data.meals.length === 0) {
+          console.log(`No recipes found for "${rawName}" after all attempts`);
+          continue;
+        }
+
+        console.log(
+          `Found ${data.meals.length} recipes in filter.php for "${rawName}"`,
+        );
+
+        const recipesToFetch = data.meals.slice(0, MAX_PER_INGREDIENT);
+
+        const detailedMeals = await Promise.all(
+          recipesToFetch.map((meal: any) => {
+            const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`;
+            console.log('  lookup.php for id:', meal.idMeal, url);
+            return fetch(url)
+              .then((res) => res.json())
+              .catch((err) => {
+                console.error(`Error fetching recipe ${meal.idMeal}:`, err);
+                return null;
+              });
+          }),
+        );
+
+        const formattedRecipes = detailedMeals
+          .filter((result) => {
+            const ok = result && result.meals && result.meals[0];
+            if (!ok) {
+              console.warn('  lookup.php returned no meals, skipping one entry');
+            }
+            return ok;
+          })
+          .map((result) => {
+            const recipe = formatRecipe(result.meals[0]);
+            recipe.matchedIngredients = [rawName];
+            return recipe;
+          });
+
+        console.log(
+          `Successfully formatted ${formattedRecipes.length} recipes for "${rawName}"`,
+        );
+        allRecipes.push(...formattedRecipes);
       }
+
+      console.log(`Total recipes before deduplication: ${allRecipes.length}`);
 
       const recipeMap = new Map<string, Recipe>();
       allRecipes.forEach((recipe) => {
@@ -301,6 +359,8 @@ export default function RecipeTabScreen() {
       });
 
       const finalRecipes = Array.from(recipeMap.values());
+      console.log(`Total unique recipes after merge: ${finalRecipes.length}`);
+      console.log('Recipes state will be set with length:', finalRecipes.length);
       setRecipes(finalRecipes);
     } catch (error) {
       console.error('Error fetching recipes by pantry items:', error);
