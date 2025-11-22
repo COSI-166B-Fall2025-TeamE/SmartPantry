@@ -9,7 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import { useFocusEffect } from '@react-navigation/native';
-import React, {
+import React,
+{
   useCallback,
   useEffect,
   useState,
@@ -23,8 +24,10 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  RefreshControl,     // 👈 ADD THIS
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 // Fisher–Yates shuffle
 const shuffleArray = <T,>(array: T[]): T[] => {
@@ -35,6 +38,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
   }
   return arr;
 };
+
 
 interface Recipe {
   idMeal: string;
@@ -57,6 +61,7 @@ interface Recipe {
   matchedIngredients?: string[];
 }
 
+
 interface PantryItem {
   id: string;
   name: string;
@@ -64,7 +69,9 @@ interface PantryItem {
   quantity?: string;
 }
 
+
 type FilterType = 'random' | 'expiring' | 'pantry';
+
 
 const CATEGORIES = [
   'All',
@@ -84,35 +91,46 @@ const CATEGORIES = [
   'Vegan',
 ];
 
+
 export default function RecipeTabScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
 
+
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ⭐ NEW: pull‑to‑refresh state
+  const [refreshing, setRefreshing] = useState(false);
+
   const [favoriteStates, setFavoriteStates] = useState<{ [key: string]: boolean }>({});
   const [filterType, setFilterType] = useState<FilterType>('random');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
 
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
   const [expiringItems, setExpiringItems] = useState<PantryItem[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+
   const params = useLocalSearchParams();
   const initialSearch =
     typeof params.search === 'string' ? params.search : '';
+
 
   // how many recipes per ingredient at most
   const MAX_PER_INGREDIENT_EXPIRING = 3;
   const MAX_PER_INGREDIENT_PANTRY = 3;
 
+
   // Normalize a Date to local midnight (ignore time)
   const toDateOnly = (d: Date) => {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   };
+
 
   // Load pantry items (same pattern as on home)
   const loadPantryItems = async () => {
@@ -121,29 +139,37 @@ export default function RecipeTabScreen() {
       const items = (result as any).data as PantryItem[];
       setPantryItems(items);
 
+
       console.log('Here are the items', items);
+
 
       const today = toDateOnly(new Date());
       const weekFromNow = toDateOnly(
         new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7),
       );
 
+
       console.log('Today (date-only):', today);
       console.log('Week from now (date-only):', weekFromNow);
+
 
       const expiring = items.filter((item) => {
         const raw = item.expirationDate?.split('T')[0] ?? item.expirationDate;
         const parsed = new Date(raw);
+
 
         if (isNaN(parsed.getTime())) {
           console.warn('Could not parse expirationDate for item', item);
           return false;
         }
 
+
         const dateOnly = toDateOnly(parsed);
+
 
         return dateOnly >= today && dateOnly <= weekFromNow;
       });
+
 
       setExpiringItems(expiring);
       console.log('Expiring soon items', expiring);
@@ -154,6 +180,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   // Refresh pantry when screen focuses
   useFocusEffect(
     useCallback(() => {
@@ -162,16 +189,19 @@ export default function RecipeTabScreen() {
     }, []),
   );
 
+
   // Fetch recipes when pantry/filters change
   useEffect(() => {
     fetchRecipes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory, filterType, refreshTrigger]);
 
+
   // Load favorites whenever recipes list changes
   useEffect(() => {
     loadFavoriteStates();
   }, [recipes]);
+
 
   // Apply initial search from home navigation
   useEffect(() => {
@@ -179,6 +209,7 @@ export default function RecipeTabScreen() {
       setSearchQuery(initialSearch);
     }
   }, [initialSearch]);
+
 
   const loadFavoriteStates = async () => {
     const states: { [key: string]: boolean } = {};
@@ -188,7 +219,9 @@ export default function RecipeTabScreen() {
     setFavoriteStates(states);
   };
 
+
   const fetchRecipes = async () => {
+    // Keep internal loading separate from pull‑to‑refresh
     setLoading(true);
     try {
       if (filterType === 'random') {
@@ -201,13 +234,16 @@ export default function RecipeTabScreen() {
             ),
           );
 
+
           const formattedRecipes = randomMeals
             .filter((result) => result.meals && result.meals[0])
             .map((result) => formatRecipe(result.meals[0]));
 
+
           const uniqueRecipes = Array.from(
             new Map(formattedRecipes.map((r) => [r.idMeal, r])).values(),
           );
+
 
           setRecipes(uniqueRecipes);
         } else {
@@ -215,6 +251,7 @@ export default function RecipeTabScreen() {
             `https://www.themealdb.com/api/json/v1/1/filter.php?c=${selectedCategory}`,
           );
           const data = await response.json();
+
 
           if (data.meals) {
             const detailedMeals = await Promise.all(
@@ -225,9 +262,11 @@ export default function RecipeTabScreen() {
               ),
             );
 
+
             const formattedRecipes = detailedMeals
               .filter((result) => result.meals && result.meals[0])
               .map((result) => formatRecipe(result.meals[0]));
+
 
             setRecipes(formattedRecipes);
           } else {
@@ -246,8 +285,23 @@ export default function RecipeTabScreen() {
       setRecipes([]);
     } finally {
       setLoading(false);
+      setRefreshing(false); // 👈 ensure pull‑to‑refresh spinner stops
     }
   };
+
+
+  // ⭐ NEW: handler used by RefreshControl
+  const onPullToRefresh = useCallback(() => {
+    // This shows the spinner at the top
+    setRefreshing(true);
+
+    // Optionally clear search so it fully re‑randomizes
+    // setSearchQuery('');
+
+    // Re‑use your existing logic (filterType, category, pantry, etc.)
+    fetchRecipes();
+  }, [filterType, selectedCategory, expiringItems, pantryItems]);
+
 
   // Randomized suggestions for both "expiring" and "pantry"
   const fetchRecipesByPantryItems = async (
@@ -260,21 +314,26 @@ export default function RecipeTabScreen() {
       return;
     }
 
+
     const MAX_PER_INGREDIENT =
       mode === 'expiring'
         ? MAX_PER_INGREDIENT_EXPIRING
         : MAX_PER_INGREDIENT_PANTRY;
 
+
     try {
       const allRecipes: Recipe[] = [];
+
 
       for (const item of items) {
         const rawName = item.name.trim();
         console.log('---');
         console.log(`Fetching recipes for ${mode} item: "${rawName}"`);
 
+
         const ingredientQuery = rawName.replace(/\s+/g, '_');
         let data: any = null;
+
 
         const fetchByIngredient = async (q: string) => {
           const url = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(
@@ -285,12 +344,14 @@ export default function RecipeTabScreen() {
           return res.json();
         };
 
+
         // 1) Try exact ingredientQuery
         try {
           data = await fetchByIngredient(ingredientQuery);
         } catch (e) {
           console.error('Error calling filter.php for', ingredientQuery, e);
         }
+
 
         // 2) If nothing, try a simple plural/singular tweak
         if (!data?.meals || data.meals.length === 0) {
@@ -304,6 +365,7 @@ export default function RecipeTabScreen() {
           } else {
             alt = `${alt}s`;
           }
+
 
           const altQuery = alt.replace(/\s+/g, '_');
           console.log(
@@ -319,19 +381,23 @@ export default function RecipeTabScreen() {
           }
         }
 
+
         if (!data?.meals || data.meals.length === 0) {
           console.log(`No recipes found for "${rawName}" after all attempts`);
           continue;
         }
+
 
         const totalForIngredient = data.meals.length;
         console.log(
           `Found ${totalForIngredient} recipes in filter.php for "${rawName}"`,
         );
 
+
         // If ingredient has >2 recipes, shuffle to randomize; otherwise keep as is.
         const shuffledMeals =
           totalForIngredient > 2 ? shuffleArray(data.meals) : data.meals;
+
 
         if (totalForIngredient <= 2) {
           console.log(
@@ -339,10 +405,12 @@ export default function RecipeTabScreen() {
           );
         }
 
+
         const recipesToFetch = shuffledMeals.slice(
           0,
           Math.min(MAX_PER_INGREDIENT, shuffledMeals.length),
         );
+
 
         const detailedMeals = await Promise.all(
           recipesToFetch.map((meal: any) => {
@@ -356,6 +424,7 @@ export default function RecipeTabScreen() {
               });
           }),
         );
+
 
         const formattedRecipes = detailedMeals
           .filter((result) => {
@@ -371,13 +440,16 @@ export default function RecipeTabScreen() {
             return recipe;
           });
 
+
         console.log(
           `Successfully formatted ${formattedRecipes.length} recipes for "${rawName}"`,
         );
         allRecipes.push(...formattedRecipes);
       }
 
+
       console.log(`Total recipes before deduplication: ${allRecipes.length}`);
+
 
       const recipeMap = new Map<string, Recipe>();
       allRecipes.forEach((recipe) => {
@@ -394,6 +466,7 @@ export default function RecipeTabScreen() {
         }
       });
 
+
       const finalRecipes = Array.from(recipeMap.values());
       console.log(`Total unique recipes after merge: ${finalRecipes.length}`);
       console.log('Recipes state will be set with length:', finalRecipes.length);
@@ -404,11 +477,13 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   const formatRecipe = (meal: any): Recipe => {
     const ingredients = [];
     for (let i = 1; i <= 20; i++) {
       const ingredient = meal[`strIngredient${i}`];
       const measure = meal[`strMeasure${i}`];
+
 
       if (ingredient && ingredient.trim() && ingredient !== 'null') {
         ingredients.push({
@@ -420,6 +495,7 @@ export default function RecipeTabScreen() {
         });
       }
     }
+
 
     return {
       idMeal: meal.idMeal,
@@ -439,6 +515,7 @@ export default function RecipeTabScreen() {
     };
   };
 
+
   const handleSearch = async (query: string) => {
     if (query.length >= 3) {
       setLoading(true);
@@ -447,22 +524,27 @@ export default function RecipeTabScreen() {
           `https://www.themealdb.com/api/json/v1/1/search.php?s=${query}`,
         ).then((res) => res.json());
 
+
         const ingredientQuery = query.replace(/\s+/g, '_');
         const ingredientSearchPromise = fetch(
           `https://www.themealdb.com/api/json/v1/1/filter.php?i=${ingredientQuery}`,
         ).then((res) => res.json());
+
 
         const [nameData, ingredientData] = await Promise.all([
           nameSearchPromise,
           ingredientSearchPromise,
         ]);
 
+
         let allRecipes: Recipe[] = [];
+
 
         if (nameData.meals) {
           const nameRecipes = nameData.meals.map(formatRecipe);
           allRecipes = [...allRecipes, ...nameRecipes];
         }
+
 
         if (ingredientData.meals) {
           const detailedMeals = await Promise.all(
@@ -473,16 +555,20 @@ export default function RecipeTabScreen() {
             ),
           );
 
+
           const ingredientRecipes = detailedMeals
             .filter((result) => result.meals && result.meals[0])
             .map((result) => formatRecipe(result.meals[0]));
 
+
           allRecipes = [...allRecipes, ...ingredientRecipes];
         }
+
 
         const uniqueRecipes = Array.from(
           new Map(allRecipes.map((recipe) => [recipe.idMeal, recipe])).values(),
         );
+
 
         setRecipes(uniqueRecipes);
       } catch (error) {
@@ -496,6 +582,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery.length >= 3 || searchQuery.length === 0) {
@@ -503,9 +590,11 @@ export default function RecipeTabScreen() {
       }
     }, 500);
 
+
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
 
   const displayedRecipes =
     searchQuery.length > 0 && searchQuery.length < 3
@@ -520,8 +609,10 @@ export default function RecipeTabScreen() {
         )
       : recipes;
 
+
   const handleFavoriteToggle = async (recipe: Recipe, event: any) => {
     event.stopPropagation();
+
 
     try {
       const favoriteRecipe: FavoriteRecipe = {
@@ -532,7 +623,9 @@ export default function RecipeTabScreen() {
         strArea: recipe.strArea,
       };
 
+
       const newFavoriteState = await toggleFavorite(favoriteRecipe);
+
 
       setFavoriteStates((prev) => ({
         ...prev,
@@ -542,6 +635,7 @@ export default function RecipeTabScreen() {
       console.error('Error toggling favorite:', error);
     }
   };
+
 
   const getFilterLabel = () => {
     switch (filterType) {
@@ -556,6 +650,7 @@ export default function RecipeTabScreen() {
     }
   };
 
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -565,6 +660,7 @@ export default function RecipeTabScreen() {
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text style={styles.title}>Recipe Recommendations</Text>
           <Text style={styles.subtitle}>Discover delicious meals</Text>
+
 
           <RNView style={styles.headerButtonContainer}>
             <TouchableOpacity
@@ -585,6 +681,7 @@ export default function RecipeTabScreen() {
               </Text>
             </TouchableOpacity>
 
+
             <TouchableOpacity
               style={[
                 styles.headerButton,
@@ -604,6 +701,7 @@ export default function RecipeTabScreen() {
             </TouchableOpacity>
           </RNView>
         </View>
+
 
         {/* Search Bar */}
         <View
@@ -634,6 +732,7 @@ export default function RecipeTabScreen() {
           )}
         </View>
 
+
         {/* Filter Row */}
         <View
           style={[styles.filterRow, { backgroundColor: colors.background }]}
@@ -663,6 +762,7 @@ export default function RecipeTabScreen() {
                 color={colors.buttonText}
               />
             </TouchableOpacity>
+
 
           {showFilterDropdown && (
             <View
@@ -695,6 +795,7 @@ export default function RecipeTabScreen() {
                 </Text>
               </TouchableOpacity>
 
+
               <TouchableOpacity
                 style={[
                   styles.dropdownItem,
@@ -718,6 +819,7 @@ export default function RecipeTabScreen() {
                   Expiring Soon ({expiringItems.length} items)
                 </Text>
               </TouchableOpacity>
+
 
               <TouchableOpacity
                 style={[
@@ -745,6 +847,7 @@ export default function RecipeTabScreen() {
             </View>
           )}
           </View>
+
 
           {/* Category Scroll */}
           <ScrollView
@@ -792,6 +895,7 @@ export default function RecipeTabScreen() {
           </ScrollView>
         </View>
 
+
         {/* Recipe List */}
         {loading ? (
           <View
@@ -807,6 +911,15 @@ export default function RecipeTabScreen() {
           <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
+            // ⭐ NEW: attach RefreshControl here
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onPullToRefresh}
+                tintColor={colors.buttonBackground}
+                colors={[colors.buttonBackground]}
+              />
+            }
           >
             <View
               style={[
@@ -830,6 +943,7 @@ export default function RecipeTabScreen() {
                         resizeMode="cover"
                       />
 
+
                       <TouchableOpacity
                         style={styles.heartButton}
                         onPress={(e) => handleFavoriteToggle(recipe, e)}
@@ -848,6 +962,7 @@ export default function RecipeTabScreen() {
                       </TouchableOpacity>
                     </View>
 
+
                     <View
                       style={[
                         styles.recipeInfo,
@@ -863,6 +978,7 @@ export default function RecipeTabScreen() {
                         {recipe.strMeal}
                       </Text>
 
+
                       <RNView style={styles.recipeDetails}>
                         <RNView style={styles.detailItem}>
                           <Text style={styles.detailIcon}>🌍</Text>
@@ -875,6 +991,7 @@ export default function RecipeTabScreen() {
                             {recipe.strArea}
                           </Text>
                         </RNView>
+
 
                         <RNView style={styles.badgesContainer}>
                           <RNView
@@ -902,6 +1019,7 @@ export default function RecipeTabScreen() {
                               {recipe.strCategory}
                             </Text>
                           </RNView>
+
 
                           {recipe.matchedIngredients &&
                             recipe.matchedIngredients.length > 0 &&
@@ -954,6 +1072,7 @@ export default function RecipeTabScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -1045,7 +1164,6 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    flex: 1,
   },
   dropdownMenu: {
     position: 'absolute',
