@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import 'react-native-url-polyfill/auto';
 import validatePassword from './passwordValidator';
 
@@ -11,15 +11,22 @@ import validatePassword from './passwordValidator';
 export default function LoginScreen() {
   const [session, setSession] = useState<Session | null>(null)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
+  useFocusEffect(
+    useCallback(() => {
+      // Check session when screen comes into focus
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session)
+      })
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-  }, [])
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session)
+      })
+
+      return () => {
+        subscription.unsubscribe()
+      }
+    }, [])
+  )
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -32,7 +39,12 @@ export default function LoginScreen() {
       password: password,
     })
 
-    if (error) Alert.alert(error.message)
+    if (error){
+      Alert.alert(error.message)
+    } else {
+      // navigate to homepage after successful login
+      router.replace('/(tabs)');
+    }
     setLoading(false)
   }
   
@@ -57,8 +69,11 @@ export default function LoginScreen() {
 
     if (error) {
       console.error('Error logging out:', error.message)
+      Alert.alert('Error', error.message)
     } else {
       console.log('Successfully logged out')
+      // staying on login page (it will automatically show the login form again)
+      setSession(null)
     }
   };
 
