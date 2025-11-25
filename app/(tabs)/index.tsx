@@ -329,12 +329,7 @@ export default function TabOneScreen() {
                   onPress={async () => {
                     try {
                       await AsyncStorage.removeItem('hasSeenOnboarding');
-                      Alert.alert(
-                        'Onboarding Reset', 
-                        'Onboarding will show again the next time you open the app.',
-                        [{ text: 'OK' }]
-                      );
-                      setIsSidebarVisible(false);
+                      router.navigate('/onboardingPage');
                     } catch (error) {
                       console.error('Error resetting onboarding:', error);
                       Alert.alert('Error', 'Failed to reset onboarding');

@@ -17,6 +17,7 @@ export default function OnboardingScreen() {
     try {
       const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
       
+      console.log("Checking onboarding", isLoading)
       // if onboarding hasn't been seen, show it regardless of login status
       if (hasSeenOnboarding !== 'true') {
         setIsLoading(false);
@@ -52,6 +53,8 @@ export default function OnboardingScreen() {
         // navigate to log in page
         router.replace('/auth/login');
       }
+
+      
     } catch (error) {
       console.error('Error saving onboarding status:', error);
       // navigate anyway even if save fails
@@ -70,6 +73,7 @@ export default function OnboardingScreen() {
     );
   }
   
+  console.log("Showing the loading page")
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
