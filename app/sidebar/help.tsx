@@ -1,12 +1,34 @@
 import Colors from '@/constants/templateColors';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 export default function HelpScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
+  const [rating, setRating] = useState(0);
+
+  const renderStars = () => {
+    return (
+      <View style={styles.starsContainer}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <TouchableOpacity
+            key={star}
+            onPress={() => setRating(star)}
+            style={styles.starButton}
+          >
+            <Ionicons
+              name={star <= rating ? 'star' : 'star-outline'}
+              size={40}
+              color={star <= rating ? '#FFD700' : colors.text}
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -45,12 +67,12 @@ export default function HelpScreen() {
           
           <View style={styles.contactItem}>
             <Text style={[styles.contactLabel, { color: colors.text }]}>Email:</Text>
-            <Text style={[styles.contactValue, { color: colors.buttonBackground }]}>support@smartpantry.app</Text>
+            <Text style={[styles.contactValue, { color: colors.buttonBackground }]}>xxxxx@xxx.com</Text>
           </View>
           
           <View style={styles.contactItem}>
             <Text style={[styles.contactLabel, { color: colors.text }]}>Phone:</Text>
-            <Text style={[styles.contactValue, { color: colors.buttonBackground }]}>1-800-SMART-PANTRY</Text>
+            <Text style={[styles.contactValue, { color: colors.buttonBackground }]}>1-XXX-SMART-PANTRY</Text>
           </View>
           
           <View style={styles.contactItem}>
@@ -64,6 +86,16 @@ export default function HelpScreen() {
           <Text style={[styles.description, { color: colors.text, opacity: 0.8 }]}>
             We value your feedback! Help us improve SmartPantry by sharing your experience and suggestions.
           </Text>
+          
+          <View style={styles.ratingContainer}>
+            <Text style={[styles.ratingTitle, { color: colors.text }]}>Rate Your Experience:</Text>
+            {renderStars()}
+            {rating > 0 && (
+              <Text style={[styles.ratingText, { color: colors.text }]}>
+                {rating} Star{rating > 1 ? 's' : ''} - Thank you for your feedback!
+              </Text>
+            )}
+          </View>
         </View>
 
         <TouchableOpacity
@@ -133,6 +165,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 16,
     lineHeight: 22,
+    marginBottom: 15,
   },
   homeButton: {
     borderRadius: 12,
@@ -143,5 +176,28 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  ratingContainer: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  ratingTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+  starButton: {
+    marginHorizontal: 5,
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 10,
+    textAlign: 'center',
   },
 });
