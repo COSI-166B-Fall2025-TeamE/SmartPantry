@@ -1,4 +1,5 @@
 import Colors from '@/constants/templateColors';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
@@ -14,7 +15,7 @@ export default function AboutUsScreen() {
         <Text style={[styles.title, { color: colors.text }]}>About Us</Text>
         
         <Text style={[styles.description, { color: colors.buttonBackground }]}>
-        SmartPantry is a revolutionary mobile application designed to help households reduce food waste  and better manage their pantry items.
+          SmartPantry is a revolutionary mobile application designed to help households reduce food waste  and better manage their pantry items.
         </Text>
 
         <View style={[styles.teamSection, { backgroundColor: colors.todayCard }]}>
@@ -22,29 +23,33 @@ export default function AboutUsScreen() {
           
           <View style={styles.teamContainer}>
             {/* Team Member 1 */}
-            <View style={styles.memberContainer}>
-              <View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]} />
+              <View style={styles.memberContainer}><View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]}>
+                <Ionicons name="person" size={50} color={colors.text} /> 
+              </View>
               <Text style={[styles.memberName, { color: colors.secondaryButtonText }]}>Amie Feng</Text>
               <Text style={[styles.memberRole, { color: colors.text, opacity: 0.7 }]}>Developer</Text>
             </View>
             
             {/* Team Member 2 */}
-            <View style={styles.memberContainer}>
-              <View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]} />
+            <View style={styles.memberContainer}><View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]}>
+                <Ionicons name="person" size={50} color={colors.text} /> 
+              </View>
               <Text style={[styles.memberName, { color: colors.secondaryButtonText }]}>Rowan Scassellati</Text>
               <Text style={[styles.memberRole, { color: colors.text, opacity: 0.7 }]}>Developer</Text>
             </View>
             
             {/* Team Member 3 */}
-            <View style={styles.memberContainer}>
-              <View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]} />
+            <View style={styles.memberContainer}><View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]}>
+                <Ionicons name="person" size={50} color={colors.text} /> 
+              </View>
               <Text style={[styles.memberName, { color: colors.secondaryButtonText }]}>Qiping Zhang</Text>
               <Text style={[styles.memberRole, { color: colors.text, opacity: 0.7 }]}>Developer</Text>
             </View>
             
             {/* Team Member 4 */}
-            <View style={styles.memberContainer}>
-              <View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]} />
+            <View style={styles.memberContainer}><View style={[styles.imagePlaceholder, { backgroundColor: colors.expiringCard }]}>
+                <Ionicons name="person" size={50} color={colors.text} /> 
+              </View>
               <Text style={[styles.memberName, { color: colors.secondaryButtonText }]}>Promise Adeliyi</Text>
               <Text style={[styles.memberRole, { color: colors.text, opacity: 0.7 }]}>Developer</Text>
             </View>
@@ -133,6 +138,8 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     marginBottom: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   memberName: {
     fontSize: 18,
