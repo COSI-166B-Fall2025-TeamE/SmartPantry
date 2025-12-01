@@ -29,6 +29,14 @@ export const fetchAllData = async (tableName: string) => {
         .select('*')
       if (error) throw error;
       console.log(`Data fetched from ${tableName}`);
+
+      if (tableName==="custom_recipes"){
+        const recipeData = data.map((item) => ({
+          ...item,
+          ingredients: JSON.parse(item.ingredients)
+        }));
+        return { success: true, data: recipeData};
+      }
       return { success: true, data};
     }
     else {

@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const CUSTOM_RECIPES_KEY = '@custom_recipes';
 
 export interface CustomRecipe {
-  idMeal: string; // Will be generated as "custom_${timestamp}"
+  id: string; // Will be generated as "custom_${timestamp}"
   strMeal: string;
   strCategory: string;
   strArea: string;
@@ -38,7 +38,7 @@ export const getCustomRecipes = async (): Promise<CustomRecipe[]> => {
 export const getCustomRecipe = async (id: string): Promise<CustomRecipe | null> => {
   try {
     const recipes = await getCustomRecipes();
-    return recipes.find(recipe => recipe.idMeal === id) || null;
+    return recipes.find(recipe => recipe.id === id) || null;
   } catch (error) {
     console.error('Error getting custom recipe:', error);
     return null;
@@ -46,12 +46,12 @@ export const getCustomRecipe = async (id: string): Promise<CustomRecipe | null> 
 };
 
 // Save a new custom recipe
-export const saveCustomRecipe = async (recipe: Omit<CustomRecipe, 'idMeal' | 'isCustom' | 'dateCreated'>): Promise<CustomRecipe> => {
+export const saveCustomRecipe = async (recipe: Omit<CustomRecipe, 'id' | 'isCustom' | 'dateCreated'>): Promise<CustomRecipe> => {
   try {
     const recipes = await getCustomRecipes();
     const newRecipe: CustomRecipe = {
       ...recipe,
-      idMeal: `custom_${Date.now()}`,
+      id: `custom_${Date.now()}`,
       isCustom: true,
       dateCreated: new Date().toISOString(),
     };
@@ -69,7 +69,7 @@ export const saveCustomRecipe = async (recipe: Omit<CustomRecipe, 'idMeal' | 'is
 export const updateCustomRecipe = async (id: string, updatedRecipe: Partial<CustomRecipe>): Promise<boolean> => {
   try {
     const recipes = await getCustomRecipes();
-    const index = recipes.findIndex(recipe => recipe.idMeal === id);
+    const index = recipes.findIndex(recipe => recipe.id === id);
     
     if (index !== -1) {
       recipes[index] = { ...recipes[index], ...updatedRecipe };
@@ -87,7 +87,7 @@ export const updateCustomRecipe = async (id: string, updatedRecipe: Partial<Cust
 export const deleteCustomRecipe = async (id: string): Promise<boolean> => {
   try {
     const recipes = await getCustomRecipes();
-    const filteredRecipes = recipes.filter(recipe => recipe.idMeal !== id);
+    const filteredRecipes = recipes.filter(recipe => recipe.id !== id);
     
     if (filteredRecipes.length < recipes.length) {
       await AsyncStorage.setItem(CUSTOM_RECIPES_KEY, JSON.stringify(filteredRecipes));

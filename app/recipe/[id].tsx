@@ -1,16 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useColorScheme } from 'react-native';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { StyleSheet, ScrollView, TouchableOpacity, View as RNView, ActivityIndicator, Image, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
+import { FavoriteRecipe, isFavorite, toggleFavorite } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
-import { isFavorite, toggleFavorite, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
-import { getCustomRecipe } from '@/lib/utils/customRecipesStorage';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, Linking, View as RNView, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 interface Recipe {
-  idMeal: string;
+  id: string;
   strMeal: string;
   strDrinkAlternate: string | null;
   strCategory: string;
@@ -60,7 +59,7 @@ export default function RecipeDetailScreen() {
 
   const checkFavoriteStatus = async () => {
     if (recipe) {
-      const favoriteStatus = await isFavorite(recipe.idMeal);
+      const favoriteStatus = await isFavorite(recipe.id);
       setIsFavorited(favoriteStatus);
     }
   };
@@ -71,7 +70,7 @@ export default function RecipeDetailScreen() {
     
     try {
       const favoriteRecipe: FavoriteRecipe = {
-        idMeal: recipe.idMeal,
+        id: recipe.id,
         strMeal: recipe.strMeal,
         strMealThumb: recipe.strMealThumb,
         strCategory: recipe.strCategory,
@@ -168,7 +167,11 @@ export default function RecipeDetailScreen() {
     try {
       // Check if this is a custom recipe
       if (typeof id === 'string' && id.startsWith('custom_')) {
-        const customRecipe = await getCustomRecipe(id);
+        const recipesResult = await fetchAllData('custom_recipes');
+        const customRecipe = recipesResult.data.find(item => item.id === id);
+        console.log("customRecipeFound", customRecipe); // Output: { id: 3, name: 'Orange' }
+        
+        // const customRecipe = await getCustomRecipe(id);
         if (customRecipe) {
           setRecipe(customRecipe as any); // Cast to Recipe type
         }
@@ -206,7 +209,7 @@ export default function RecipeDetailScreen() {
 
 
     return {
-      idMeal: meal.idMeal,
+      id: meal.id,
       strMeal: meal.strMeal,
       strDrinkAlternate: meal.strDrinkAlternate,
       strCategory: meal.strCategory,
