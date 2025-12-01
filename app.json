@@ -4,7 +4,7 @@
     "slug": "smart-pantry",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Smart Pantry Icon.png",
     "scheme": "smartpantry",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
