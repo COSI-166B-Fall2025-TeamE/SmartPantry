@@ -1,6 +1,7 @@
 import { deleteById, fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
+import { supabase } from '@/lib/supabase';
 import { CustomRecipe, getCustomRecipes } from '@/lib/utils/customRecipesStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { Session } from '@supabase/supabase-js';
@@ -28,6 +29,7 @@ export default function MyRecipesScreen() {
   const loadRecipesDatabase = async () => {
     const recipesResult = await fetchAllData('custom_recipes');
     setRecipes(recipesResult.data)
+    setLoading(false);
   };
     
   const [session, setSession] = useState<Session | null>(null)
@@ -36,7 +38,15 @@ export default function MyRecipesScreen() {
     loadRecipesDatabase();
   }, [session])
   
-  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
 
   const loadRecipes = async () => {
     setLoading(true);
