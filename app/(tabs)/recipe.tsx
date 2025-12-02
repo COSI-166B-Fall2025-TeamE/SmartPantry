@@ -239,7 +239,7 @@ export default function RecipeTabScreen() {
           const uniqueRecipes = Array.from(
             new Map(formattedRecipes.map((r) => [r.id, r])).values(),
           );
-
+          console.log("uniqueRecipes", uniqueRecipes)
 
           setRecipes(uniqueRecipes);
         } else {
@@ -494,7 +494,7 @@ export default function RecipeTabScreen() {
 
 
     return {
-      id: meal.id,
+      id: meal.idMeal,
       strMeal: meal.strMeal,
       strDrinkAlternate: meal.strDrinkAlternate,
       strCategory: meal.strCategory,
