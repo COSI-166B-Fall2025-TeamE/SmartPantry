@@ -1,13 +1,14 @@
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
+import { supabase } from '@/lib/supabase';
 import {
   FavoriteRecipe,
-  isFavorite,
-  toggleFavorite,
+  toggleFavorite
 } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { Session } from '@supabase/supabase-js';
 import { Href, useLocalSearchParams, useRouter } from 'expo-router';
 import React, {
   useCallback,
@@ -209,8 +210,9 @@ export default function RecipeTabScreen() {
 
   const loadFavoriteStates = async () => {
     const states: { [key: string]: boolean } = {};
-    for (const recipe of recipes) {
-      states[recipe.id] = await isFavorite(recipe.id);
+    for (const recipe of recipes) {     
+      states[recipe.id] = (await fetchAllData("favorite_recipes")).data.some(fav => fav.id === recipe.id);
+      // states[recipe.id] = await isFavorite(recipe.id);
     }
     setFavoriteStates(states);
   };
@@ -591,6 +593,19 @@ export default function RecipeTabScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
+    const [session, setSession] = useState<Session | null>(null)
+
+    
+    useEffect(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session)
+      })
+  
+      supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session)
+      })
+    }, [])
+  
 
   const displayedRecipes =
     searchQuery.length > 0 && searchQuery.length < 3
@@ -620,7 +635,7 @@ export default function RecipeTabScreen() {
       };
 
 
-      const newFavoriteState = await toggleFavorite(favoriteRecipe);
+      const newFavoriteState = await toggleFavorite(favoriteRecipe, session);
 
 
       setFavoriteStates((prev) => ({

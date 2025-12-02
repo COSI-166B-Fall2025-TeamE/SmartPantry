@@ -1,4 +1,6 @@
+import { deleteById, fetchAllData, insertData } from '@/components/DatabaseFunctions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Session } from '@supabase/supabase-js';
 
 const FAVORITES_KEY = '@favorites';
 
@@ -67,15 +69,20 @@ export const removeFromFavorites = async (recipeId: string): Promise<void> => {
 };
 
 // Toggle favorite status
-export const toggleFavorite = async (recipe: FavoriteRecipe): Promise<boolean> => {
+export const toggleFavorite = async (recipe: FavoriteRecipe, session: Session): Promise<boolean> => {
   try {
-    const isCurrentlyFavorite = await isFavorite(recipe.id);
+    const isCurrentlyFavorite = (await fetchAllData("favorite_recipes")).data.some(fav => fav.id === recipe.id);
+    
+    // const isCurrentlyFavorite = await isFavorite(recipe.id);
     
     if (isCurrentlyFavorite) {
+      await deleteById("favorite_recipes", recipe.id)
       await removeFromFavorites(recipe.id);
       return false;
     } else {
+      console.log(recipe)
       await addToFavorites(recipe);
+      await insertData("favorite_recipes", recipe, session)
       return true;
     }
   } catch (error) {

@@ -1,6 +1,7 @@
+import { deleteById, fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
-import { FavoriteRecipe, getFavorites, removeFromFavorites } from '@/lib/utils/favoritesStorage';
+import { FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -26,8 +27,9 @@ export default function FavoritesScreen() {
 
   const loadFavorites = async () => {
     try {
-      const favs = await getFavorites();
-      setFavorites(favs);
+      const favsDatabase = await fetchAllData("favorite_recipes")
+      // const favs = await getFavorites();
+      setFavorites(favsDatabase.data);
     } catch (error) {
       console.error('Error loading favorites:', error);
     }
@@ -43,7 +45,8 @@ export default function FavoritesScreen() {
 
   const handleRemoveFavorite = async (recipeId: string) => {
     try {
-      await removeFromFavorites(recipeId);
+      // await removeFromFavorites(recipeId);
+      await deleteById("favorite_recipes", recipeId)
       setFavorites(prevFavorites => prevFavorites.filter(fav => fav.id !== recipeId));
     } catch (error) {
       console.error('Error removing favorite:', error);

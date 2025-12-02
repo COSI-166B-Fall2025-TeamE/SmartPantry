@@ -1,7 +1,9 @@
 import { fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
-import { FavoriteRecipe, isFavorite, toggleFavorite } from '@/lib/utils/favoritesStorage';
+import { supabase } from '@/lib/supabase';
+import { FavoriteRecipe, toggleFavorite } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
+import { Session } from '@supabase/supabase-js';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Linking, View as RNView, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
@@ -59,10 +61,24 @@ export default function RecipeDetailScreen() {
 
   const checkFavoriteStatus = async () => {
     if (recipe) {
-      const favoriteStatus = await isFavorite(recipe.id);
-      setIsFavorited(favoriteStatus);
+      // const favoriteStatus = await isFavorite(recipe.id);
+      const newFavoriteStatus = (await fetchAllData("favorite_recipes")).data.some(fav => fav.id === recipe.id);
+      setIsFavorited(newFavoriteStatus);
     }
   };
+
+  const [session, setSession] = useState<Session | null>(null)
+
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
 
 
   const handleFavoriteToggle = async () => {
@@ -76,8 +92,9 @@ export default function RecipeDetailScreen() {
         strCategory: recipe.strCategory,
         strArea: recipe.strArea,
       };
+            
       
-      const newFavoriteState = await toggleFavorite(favoriteRecipe);
+      const newFavoriteState = await toggleFavorite(favoriteRecipe, session);
       setIsFavorited(newFavoriteState);
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -209,7 +226,7 @@ export default function RecipeDetailScreen() {
 
 
     return {
-      id: meal.id,
+      id: meal.idMeal,
       strMeal: meal.strMeal,
       strDrinkAlternate: meal.strDrinkAlternate,
       strCategory: meal.strCategory,
