@@ -69,8 +69,10 @@ export default function GroceryList() {
           //fliter by quantity
           sortedFilteredItems = updatedItems
             .filter(suggestion => !currentItemTexts.includes(suggestion.name.toLowerCase()))
-            .sort((a, b) => a.quantity - b.quantity)
+            .sort((a, b) => (a.quantity.replace(/\D/g, '') / a.original_quantity.replace(/\D/g, '')) - (b.quantity.replace(/\D/g, '') / b.original_quantity.replace(/\D/g, '')))
             .slice(0, 4);
+
+          console.log(sortedFilteredItems)
         }
 
         setExpirationSuggestions(sortedFilteredItems);

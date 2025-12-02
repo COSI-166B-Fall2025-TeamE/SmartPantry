@@ -68,6 +68,9 @@ export const insertData = async (tableName: string, dataToInsert: any, session: 
   try {
     dataToInsert["user_id"] = session && session.user ? session.user.user_metadata.sub : null
 
+    if(tableName === "expiration"){
+      dataToInsert['original_quantity'] = dataToInsert.quantity
+    }
     const { data, error } = await supabase
       .from(tableName)
       .insert([dataToInsert])
