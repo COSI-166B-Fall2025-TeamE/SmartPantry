@@ -6,7 +6,7 @@ import type { ImageStyle, TextStyle, ViewStyle } from 'react-native';
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-export default function OnboardingScreen() {
+export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
