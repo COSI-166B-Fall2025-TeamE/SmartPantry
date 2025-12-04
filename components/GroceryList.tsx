@@ -211,7 +211,6 @@ export default function GroceryList() {
             <Text style={[styles.emptyText, { color: colors.text }]}>Your grocery list is empty</Text>
           }
           ListHeaderComponent={
-            suggestions.length > 0 ? (
               <View style={[styles.suggestionsWrapper, { backgroundColor: colors.background }]}>
                 <View style={[styles.suggestionsContainer, { backgroundColor: colors.background }]}>
                   <View style={styles.suggestionsHeader}>
@@ -225,6 +224,7 @@ export default function GroceryList() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  {suggestions.length > 0 ? (
                   <View style={styles.suggestionsGrid}>
                     {suggestions.map((suggestion, index) => (
                       <TouchableOpacity
@@ -259,7 +259,7 @@ export default function GroceryList() {
                               ⏱️ {suggestion.expiryDays > 0 
                                 ? `Expires in ${suggestion.expiryDays} days` 
                                 : suggestion.expiryDays < 0 
-                                  ? `Expired for ${Math.abs(suggestion.expiryDays)} days` 
+                                  ? `Expired ${Math.abs(suggestion.expiryDays)} days` 
                                   : 'Expires today'}
                             </Text>
                           ) : (
@@ -279,7 +279,28 @@ export default function GroceryList() {
                         </Text>
                       </TouchableOpacity>
                     ))}
+                    {/* Add invisible placeholder items to maintain grid consistency */}
+                    {[...Array(Math.max(0, 4 - suggestions.length))].map((_, index) => (
+                      <View 
+                        key={`placeholder-${index}`}
+                        style={[
+                          styles.suggestionChip,
+                          { 
+                            backgroundColor: 'transparent',
+                            borderColor: 'transparent',
+                            opacity: 0,
+                          }
+                        ]} 
+                      />
+                    ))}
                   </View>
+                  ) : (
+                    <View style={[styles.noSuggestionsContainer, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.noSuggestionsText, { color: colors.text }]}>
+                        No suggestions currently
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 {/* Separator line */}
                 <View style={[
@@ -287,13 +308,11 @@ export default function GroceryList() {
                   { backgroundColor: colorScheme === 'dark' ? colors.border : '#E0E0E0' }
                 ]} />
               </View>
-            ) : null
           }
         />
       </KeyboardAvoidingView>
     </SafeAreaView>
-  );
-}
+  );}
 
 const styles = StyleSheet.create({
   container: {
@@ -416,7 +435,9 @@ const styles = StyleSheet.create({
   suggestionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    //justifyContent: 'space-between', 
     gap: 8,
+    alignItems: 'flex-start',
   },
   suggestionChip: {
     flexDirection: 'row',
@@ -425,9 +446,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 8,
+    //marginBottom: 8,
     minWidth: '48%',
     maxWidth: '48%',
+    minHeight: 60,
   },
   suggestionContent: {
     flex: 1,
@@ -481,5 +503,23 @@ suggestionQuantity: {
   fontSize: 11,
   fontWeight: '600',
   marginTop: 3,
+},
+noSuggestionsContainer: {
+  padding: 20,
+  borderRadius: 12,
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: 140,
+  alignSelf: 'stretch',
+  marginHorizontal: 0,
+  minWidth: '100%',
+  borderWidth: 1,
+  borderColor: '#E0E0E0',
+},
+
+noSuggestionsText: {
+  fontSize: 16,
+  fontWeight: '500',
+  opacity: 0.7,
 },
 });
