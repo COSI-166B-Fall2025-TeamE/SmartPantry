@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useColorScheme } from 'react-native';
-import { StyleSheet, ScrollView, TouchableOpacity, View as RNView, ActivityIndicator, Image, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { deleteById, fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
-import { useRouter, Stack, useFocusEffect } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import { CustomRecipe, getCustomRecipes } from '@/lib/utils/customRecipesStorage';
 import { Ionicons } from '@expo/vector-icons';
-import { getCustomRecipes, deleteCustomRecipe, CustomRecipe } from '@/lib/utils/customRecipesStorage';
-import { Href } from 'expo-router';
+import { Session } from '@supabase/supabase-js';
+import { Href, Stack, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, View as RNView, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MyRecipesScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -19,9 +20,33 @@ export default function MyRecipesScreen() {
   // Load recipes when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadRecipes();
+      // loadRecipes();
+      loadRecipesDatabase();
     }, [])
   );
+    
+  
+  const loadRecipesDatabase = async () => {
+    const recipesResult = await fetchAllData('custom_recipes');
+    setRecipes(recipesResult.data)
+    setLoading(false);
+  };
+    
+  const [session, setSession] = useState<Session | null>(null)
+  
+  useEffect(() => {
+    loadRecipesDatabase();
+  }, [session])
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
 
   const loadRecipes = async () => {
     setLoading(true);
@@ -45,9 +70,10 @@ export default function MyRecipesScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const success = await deleteCustomRecipe(recipeId);
-            if (success) {
-              loadRecipes();
+            // const success = await deleteCustomRecipe(recipeId);
+            const success = await deleteById("custom_recipes", recipeId);
+            if (success.success) {
+              loadRecipesDatabase();
             }
           },
         },
@@ -102,9 +128,9 @@ export default function MyRecipesScreen() {
               <View style={[styles.recipeGrid, { backgroundColor: colors.background }]}>
                 {recipes.map((recipe) => (
                   <TouchableOpacity 
-                    key={recipe.idMeal} 
+                    key={recipe.id} 
                     style={styles.recipeCard}
-                    onPress={() => router.push(`/recipe/${recipe.idMeal}` as Href)}
+                    onPress={() => router.push(`/recipe/${recipe.id}` as Href)}
                   >
                     <View style={styles.recipeImageContainer}>
                       <Image 
@@ -119,7 +145,7 @@ export default function MyRecipesScreen() {
                           style={[styles.iconButton, { backgroundColor: 'rgba(0, 122, 255, 0.9)' }]}
                           onPress={(e) => {
                             e.stopPropagation();
-                            router.push(`/add-recipe?id=${recipe.idMeal}` as Href);
+                            router.push(`/add-recipe?id=${recipe.id}` as Href);
                           }}
                         >
                           <Ionicons name="pencil" size={18} color="#fff" />
@@ -129,7 +155,7 @@ export default function MyRecipesScreen() {
                           style={[styles.iconButton, { backgroundColor: 'rgba(255, 59, 48, 0.9)' }]}
                           onPress={(e) => {
                             e.stopPropagation();
-                            handleDeleteRecipe(recipe.idMeal, recipe.strMeal);
+                            handleDeleteRecipe(recipe.id, recipe.strMeal);
                           }}
                         >
                           <Ionicons name="trash" size={18} color="#fff" />

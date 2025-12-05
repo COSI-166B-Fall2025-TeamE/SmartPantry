@@ -1,30 +1,27 @@
+import { fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
+import { supabase } from '@/lib/supabase';
 import {
   FavoriteRecipe,
-  isFavorite,
-  toggleFavorite,
+  toggleFavorite
 } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
-import { Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { fetchAllData } from '@/components/DatabaseFunctions';
 import { useFocusEffect } from '@react-navigation/native';
-import React,
-{
+import { Session } from '@supabase/supabase-js';
+import { Href, useLocalSearchParams, useRouter } from 'expo-router';
+import React, {
   useCallback,
   useEffect,
   useState,
 } from 'react';
-import { useColorScheme } from 'react-native';
 import {
   ActivityIndicator,
-  Image,
-  View as RNView,
+  Image, RefreshControl, View as RNView,
   ScrollView,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
-  RefreshControl,     // 👈 ADD THIS
+  TouchableOpacity, useColorScheme
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -41,7 +38,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 
 
 interface Recipe {
-  idMeal: string;
+  id: string;
   strMeal: string;
   strDrinkAlternate: string | null;
   strCategory: string;
@@ -213,8 +210,9 @@ export default function RecipeTabScreen() {
 
   const loadFavoriteStates = async () => {
     const states: { [key: string]: boolean } = {};
-    for (const recipe of recipes) {
-      states[recipe.idMeal] = await isFavorite(recipe.idMeal);
+    for (const recipe of recipes) {     
+      states[recipe.id] = (await fetchAllData("favorite_recipes")).data.some(fav => fav.id === recipe.id);
+      // states[recipe.id] = await isFavorite(recipe.id);
     }
     setFavoriteStates(states);
   };
@@ -241,9 +239,9 @@ export default function RecipeTabScreen() {
 
 
           const uniqueRecipes = Array.from(
-            new Map(formattedRecipes.map((r) => [r.idMeal, r])).values(),
+            new Map(formattedRecipes.map((r) => [r.id, r])).values(),
           );
-
+          console.log("uniqueRecipes", uniqueRecipes)
 
           setRecipes(uniqueRecipes);
         } else {
@@ -257,7 +255,7 @@ export default function RecipeTabScreen() {
             const detailedMeals = await Promise.all(
               data.meals.slice(0, 12).map((meal: any) =>
                 fetch(
-                  `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`,
+                  `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.id}`,
                 ).then((res) => res.json()),
               ),
             );
@@ -414,12 +412,12 @@ export default function RecipeTabScreen() {
 
         const detailedMeals = await Promise.all(
           recipesToFetch.map((meal: any) => {
-            const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`;
-            console.log('  lookup.php for id:', meal.idMeal, url);
+            const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.id}`;
+            console.log('  lookup.php for id:', meal.id, url);
             return fetch(url)
               .then((res) => res.json())
               .catch((err) => {
-                console.error(`Error fetching recipe ${meal.idMeal}:`, err);
+                console.error(`Error fetching recipe ${meal.id}:`, err);
                 return null;
               });
           }),
@@ -453,8 +451,8 @@ export default function RecipeTabScreen() {
 
       const recipeMap = new Map<string, Recipe>();
       allRecipes.forEach((recipe) => {
-        if (recipeMap.has(recipe.idMeal)) {
-          const existing = recipeMap.get(recipe.idMeal)!;
+        if (recipeMap.has(recipe.id)) {
+          const existing = recipeMap.get(recipe.id)!;
           if (recipe.matchedIngredients) {
             existing.matchedIngredients = [
               ...(existing.matchedIngredients || []),
@@ -462,7 +460,7 @@ export default function RecipeTabScreen() {
             ];
           }
         } else {
-          recipeMap.set(recipe.idMeal, recipe);
+          recipeMap.set(recipe.id, recipe);
         }
       });
 
@@ -498,7 +496,7 @@ export default function RecipeTabScreen() {
 
 
     return {
-      idMeal: meal.idMeal,
+      id: meal.idMeal,
       strMeal: meal.strMeal,
       strDrinkAlternate: meal.strDrinkAlternate,
       strCategory: meal.strCategory,
@@ -550,7 +548,7 @@ export default function RecipeTabScreen() {
           const detailedMeals = await Promise.all(
             ingredientData.meals.slice(0, 12).map((meal: any) =>
               fetch(
-                `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.idMeal}`,
+                `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${meal.id}`,
               ).then((res) => res.json()),
             ),
           );
@@ -566,7 +564,7 @@ export default function RecipeTabScreen() {
 
 
         const uniqueRecipes = Array.from(
-          new Map(allRecipes.map((recipe) => [recipe.idMeal, recipe])).values(),
+          new Map(allRecipes.map((recipe) => [recipe.id, recipe])).values(),
         );
 
 
@@ -595,6 +593,19 @@ export default function RecipeTabScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
+    const [session, setSession] = useState<Session | null>(null)
+
+    
+    useEffect(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session)
+      })
+  
+      supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session)
+      })
+    }, [])
+  
 
   const displayedRecipes =
     searchQuery.length > 0 && searchQuery.length < 3
@@ -616,7 +627,7 @@ export default function RecipeTabScreen() {
 
     try {
       const favoriteRecipe: FavoriteRecipe = {
-        idMeal: recipe.idMeal,
+        id: recipe.id,
         strMeal: recipe.strMeal,
         strMealThumb: recipe.strMealThumb,
         strCategory: recipe.strCategory,
@@ -624,12 +635,12 @@ export default function RecipeTabScreen() {
       };
 
 
-      const newFavoriteState = await toggleFavorite(favoriteRecipe);
+      const newFavoriteState = await toggleFavorite(favoriteRecipe, session);
 
 
       setFavoriteStates((prev) => ({
         ...prev,
-        [recipe.idMeal]: newFavoriteState,
+        [recipe.id]: newFavoriteState,
       }));
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -930,10 +941,10 @@ export default function RecipeTabScreen() {
               {displayedRecipes.length > 0 ? (
                 displayedRecipes.map((recipe) => (
                   <TouchableOpacity
-                    key={recipe.idMeal}
+                    key={recipe.id}
                     style={styles.recipeCard}
                     onPress={() =>
-                      router.push(`/recipe/${recipe.idMeal}` as Href)
+                      router.push(`/recipe/${recipe.id}` as Href)
                     }
                   >
                     <View style={styles.recipeImageContainer}>
@@ -950,13 +961,13 @@ export default function RecipeTabScreen() {
                       >
                         <Ionicons
                           name={
-                            favoriteStates[recipe.idMeal]
+                            favoriteStates[recipe.id]
                               ? 'heart'
                               : 'heart-outline'
                           }
                           size={24}
                           color={
-                            favoriteStates[recipe.idMeal] ? '#FF3B30' : '#fff'
+                            favoriteStates[recipe.id] ? '#FF3B30' : '#fff'
                           }
                         />
                       </TouchableOpacity>
@@ -1026,7 +1037,7 @@ export default function RecipeTabScreen() {
                             recipe.matchedIngredients.map(
                               (ingredient, index) => (
                                 <RNView
-                                  key={`${recipe.idMeal}-${ingredient}-${index}`}
+                                  key={`${recipe.id}-${ingredient}-${index}`}
                                   style={styles.matchedIngredientBadge}
                                 >
                                   <Ionicons

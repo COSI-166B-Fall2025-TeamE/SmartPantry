@@ -1,28 +1,21 @@
-import { useState, useEffect } from 'react';
-import { useColorScheme } from 'react-native';
-import { 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
-  View as RNView, 
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Image
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { fetchAllData, insertData, updateById } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
-import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { 
-  saveCustomRecipe, 
-  updateCustomRecipe, 
-  getCustomRecipe,
-  CustomRecipe 
+import { supabase } from '@/lib/supabase';
+import {
+  saveCustomRecipe,
+  updateCustomRecipe
 } from '@/lib/utils/customRecipesStorage';
+import { Ionicons } from '@expo/vector-icons';
+import { Session } from '@supabase/supabase-js';
+import * as ImagePicker from 'expo-image-picker';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  Alert, Image, KeyboardAvoidingView,
+  Platform, View as RNView, ScrollView, StyleSheet, TextInput, TouchableOpacity, useColorScheme
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface IngredientInput {
   ingredient: string;
@@ -60,7 +53,10 @@ export default function AddRecipeScreen() {
 
   const loadRecipeForEditing = async (recipeId: string) => {
     try {
-      const recipe = await getCustomRecipe(recipeId);
+      // const recipe = await getCustomRecipe(recipeId);
+      const recipesResult = await fetchAllData('custom_recipes');
+      const recipe = recipesResult.data.find(item => item.id === recipeId);
+      
       if (recipe) {
         setIsEditing(true);
         setRecipeName(recipe.strMeal);
@@ -142,7 +138,21 @@ export default function AddRecipeScreen() {
     
     return true;
   };
+  
+  const [session, setSession] = useState<Session | null>(null)
 
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+  }, [])
+  
+  
   const handleSave = async () => {
     if (!validateForm()) return;
 
@@ -172,9 +182,21 @@ export default function AddRecipeScreen() {
 
       if (isEditing && params.id) {
         await updateCustomRecipe(params.id as string, recipeData);
+
+        await updateById("custom_recipes", params.id as string, recipeData)
+        // updateById = async (tableName: string, id: string, updateData: any) 
         Alert.alert('Success', 'Recipe updated successfully!');
       } else {
         await saveCustomRecipe(recipeData);
+        const newRecipe = {
+            ...recipeData,
+            ingredients: JSON.stringify(recipeData.ingredients),
+            id: `custom_${Date.now()}`,
+            isCustom: true,
+            dateCreated: new Date().toISOString(),
+        };
+
+        await insertData('custom_recipes', newRecipe, session);
         Alert.alert('Success', 'Recipe saved successfully!');
       }
       

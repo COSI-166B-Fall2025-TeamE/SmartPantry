@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useColorScheme } from 'react-native';
-import { StyleSheet, ScrollView, TouchableOpacity, View as RNView, Image, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { deleteById, fetchAllData } from '@/components/DatabaseFunctions';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/templateColors';
-import { useRouter, Stack, useFocusEffect } from 'expo-router';
+import { FavoriteRecipe } from '@/lib/utils/favoritesStorage';
 import { Ionicons } from '@expo/vector-icons';
-import { getFavorites, removeFromFavorites, FavoriteRecipe } from '@/lib/utils/favoritesStorage';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Image, RefreshControl, View as RNView, ScrollView, StyleSheet, TouchableOpacity, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 export default function FavoritesScreen() {
@@ -27,8 +27,9 @@ export default function FavoritesScreen() {
 
   const loadFavorites = async () => {
     try {
-      const favs = await getFavorites();
-      setFavorites(favs);
+      const favsDatabase = await fetchAllData("favorite_recipes")
+      // const favs = await getFavorites();
+      setFavorites(favsDatabase.data);
     } catch (error) {
       console.error('Error loading favorites:', error);
     }
@@ -44,8 +45,9 @@ export default function FavoritesScreen() {
 
   const handleRemoveFavorite = async (recipeId: string) => {
     try {
-      await removeFromFavorites(recipeId);
-      setFavorites(prevFavorites => prevFavorites.filter(fav => fav.idMeal !== recipeId));
+      // await removeFromFavorites(recipeId);
+      await deleteById("favorite_recipes", recipeId)
+      setFavorites(prevFavorites => prevFavorites.filter(fav => fav.id !== recipeId));
     } catch (error) {
       console.error('Error removing favorite:', error);
     }
@@ -92,9 +94,9 @@ export default function FavoritesScreen() {
               <View style={[styles.favoritesGrid, { backgroundColor: colors.background }]}>
                 {favorites.map((recipe) => (
                   <TouchableOpacity 
-                    key={recipe.idMeal} 
+                    key={recipe.id} 
                     style={styles.recipeCard}
-                    onPress={() => router.push(`/recipe/${recipe.idMeal}`)}
+                    onPress={() => router.push(`/recipe/${recipe.id}`)}
                   >
                     <View style={styles.recipeImageContainer}>
                       <Image 
@@ -108,7 +110,7 @@ export default function FavoritesScreen() {
                         style={styles.heartButton}
                         onPress={(e) => {
                           e.stopPropagation();
-                          handleRemoveFavorite(recipe.idMeal);
+                          handleRemoveFavorite(recipe.id);
                         }}
                       >
                         <Ionicons 

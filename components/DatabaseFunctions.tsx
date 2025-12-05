@@ -29,6 +29,14 @@ export const fetchAllData = async (tableName: string) => {
         .select('*')
       if (error) throw error;
       console.log(`Data fetched from ${tableName}`);
+
+      if (tableName==="custom_recipes"){
+        const recipeData = data.map((item) => ({
+          ...item,
+          ingredients: JSON.parse(item.ingredients)
+        }));
+        return { success: true, data: recipeData};
+      }
       return { success: true, data};
     }
     else {
@@ -60,6 +68,9 @@ export const insertData = async (tableName: string, dataToInsert: any, session: 
   try {
     dataToInsert["user_id"] = session && session.user ? session.user.user_metadata.sub : null
 
+    if(tableName === "expiration"){
+      dataToInsert['original_quantity'] = dataToInsert.quantity
+    }
     const { data, error } = await supabase
       .from(tableName)
       .insert([dataToInsert])
