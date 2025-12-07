@@ -42,6 +42,7 @@ export default function AddRecipeScreen() {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
     // Only run once when component mounts
@@ -53,7 +54,6 @@ export default function AddRecipeScreen() {
 
   const loadRecipeForEditing = async (recipeId: string) => {
     try {
-      // const recipe = await getCustomRecipe(recipeId);
       const recipesResult = await fetchAllData('custom_recipes');
       const recipe = recipesResult.data.find(item => item.id === recipeId);
       
@@ -128,8 +128,8 @@ export default function AddRecipeScreen() {
       Alert.alert('Error', 'Please enter cooking instructions');
       return false;
     }
-    // Image is now optional - removed validation
-    
+    // Image is optional
+
     const validIngredients = ingredients.filter(ing => ing.ingredient.trim());
     if (validIngredients.length === 0) {
       Alert.alert('Error', 'Please add at least one ingredient');
@@ -138,21 +138,17 @@ export default function AddRecipeScreen() {
     
     return true;
   };
-  
-  const [session, setSession] = useState<Session | null>(null)
-
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
+      setSession(session);
+    });
 
     supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-  }, [])
-  
-  
+      setSession(session);
+    });
+  }, []);
+
   const handleSave = async () => {
     if (!validateForm()) return;
 
@@ -182,18 +178,16 @@ export default function AddRecipeScreen() {
 
       if (isEditing && params.id) {
         await updateCustomRecipe(params.id as string, recipeData);
-
-        await updateById("custom_recipes", params.id as string, recipeData)
-        // updateById = async (tableName: string, id: string, updateData: any) 
+        await updateById('custom_recipes', params.id as string, recipeData);
         Alert.alert('Success', 'Recipe updated successfully!');
       } else {
         await saveCustomRecipe(recipeData);
         const newRecipe = {
-            ...recipeData,
-            ingredients: JSON.stringify(recipeData.ingredients),
-            id: `custom_${Date.now()}`,
-            isCustom: true,
-            dateCreated: new Date().toISOString(),
+          ...recipeData,
+          ingredients: JSON.stringify(recipeData.ingredients),
+          id: `custom_${Date.now()}`,
+          isCustom: true,
+          dateCreated: new Date().toISOString(),
         };
 
         await insertData('custom_recipes', newRecipe, session);
@@ -256,9 +250,9 @@ export default function AddRecipeScreen() {
             keyboardDismissMode="on-drag"
           >
             <View style={[styles.form, { backgroundColor: colors.background }]}>
-              {/* Image Picker */}
+              {/* Image Picker (optional, no label text saying optional) */}
               <View style={styles.section}>
-                <Text style={styles.label}>Recipe Image (Optional)</Text>
+                <Text style={styles.label}>Recipe Image</Text>
                 <TouchableOpacity 
                   style={[styles.imagePicker, { borderColor: colors.text }]}
                   onPress={pickImage}
@@ -275,7 +269,7 @@ export default function AddRecipeScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Recipe Name */}
+              {/* Recipe Name * */}
               <View style={styles.section}>
                 <Text style={styles.label}>Recipe Name *</Text>
                 <TextInput
@@ -294,7 +288,7 @@ export default function AddRecipeScreen() {
                 />
               </View>
 
-              {/* Category */}
+              {/* Category * */}
               <View style={styles.section}>
                 <Text style={styles.label}>Category *</Text>
                 <ScrollView 
@@ -332,7 +326,7 @@ export default function AddRecipeScreen() {
                 </ScrollView>
               </View>
 
-              {/* Cuisine/Area */}
+              {/* Cuisine/Area * */}
               <View style={styles.section}>
                 <Text style={styles.label}>Cuisine/Area *</Text>
                 <TextInput
@@ -351,7 +345,7 @@ export default function AddRecipeScreen() {
                 />
               </View>
 
-              {/* Ingredients */}
+              {/* Ingredients * */}
               <View style={styles.section}>
                 <RNView style={styles.labelRow}>
                   <Text style={styles.label}>Ingredients *</Text>
@@ -405,7 +399,7 @@ export default function AddRecipeScreen() {
                 ))}
               </View>
 
-              {/* Instructions */}
+              {/* Instructions * */}
               <View style={styles.section}>
                 <Text style={styles.label}>Cooking Instructions *</Text>
                 <TextInput
@@ -427,9 +421,9 @@ export default function AddRecipeScreen() {
                 />
               </View>
 
-              {/* Tags (Optional) */}
+              {/* Tags (no optional text) */}
               <View style={styles.section}>
-                <Text style={styles.label}>Tags (Optional)</Text>
+                <Text style={styles.label}>Tags</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -446,9 +440,9 @@ export default function AddRecipeScreen() {
                 />
               </View>
 
-              {/* YouTube URL (Optional) */}
+              {/* YouTube URL */}
               <View style={styles.section}>
-                <Text style={styles.label}>YouTube Video URL (Optional)</Text>
+                <Text style={styles.label}>YouTube Video URL</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -467,9 +461,9 @@ export default function AddRecipeScreen() {
                 />
               </View>
 
-              {/* Source URL (Optional) */}
+              {/* Source URL */}
               <View style={styles.section}>
-                <Text style={styles.label}>Source URL (Optional)</Text>
+                <Text style={styles.label}>Source URL</Text>
                 <TextInput
                   style={[
                     styles.input,
