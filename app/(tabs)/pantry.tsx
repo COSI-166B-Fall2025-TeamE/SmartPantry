@@ -1,4 +1,4 @@
-import { deleteById, fetchAllData, insertData } from '@/components/DatabaseFunctions';
+import { deleteById, fetchAllData, insertData, updateById } from '@/components/DatabaseFunctions';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -9,7 +9,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Animated, FlatList, Modal, PanResponder, StyleSheet, Text, TextInput,
+  Animated, FlatList, Modal, PanResponder, ScrollView, StyleSheet, Text, TextInput,
   TouchableOpacity, useColorScheme, useWindowDimensions, View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,18 +21,20 @@ interface PantryItem {
   quantity: string;
 }
 
-
-
 const SwipeableItem = ({ 
   item, 
-  onDelete, 
+  onDelete,
+  onAddToGrocery,
+  onEdit,
   colorScheme,
   onSwipeStart,
   onSwipeEnd,
   isGridView
 }: { 
   item: PantryItem; 
-  onDelete: () => void; 
+  onDelete: () => void;
+  onAddToGrocery: () => void;
+  onEdit: () => void;
   colorScheme: 'light' | 'dark';
   onSwipeStart: () => void;
   onSwipeEnd: () => void;
@@ -42,7 +44,8 @@ const SwipeableItem = ({
   const cardWidth = isGridView 
     ? (windowWidth - 48) / 2 
     : windowWidth - 32;
-  const deleteButtonWidth = 100;
+  const actionButtonWidth = 100;
+  const totalActionsWidth = actionButtonWidth * 2; 
   
   const width = useRef(new Animated.Value(cardWidth)).current;
   const containerHeight = useRef(new Animated.Value(80)).current;
@@ -50,9 +53,8 @@ const SwipeableItem = ({
   const containerOpacity = useRef(new Animated.Value(1)).current;
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const colors = Colors[colorScheme];
-
-
 
   const panResponder = useRef(
     PanResponder.create({
@@ -72,10 +74,10 @@ const SwipeableItem = ({
       onPanResponderMove: (_, gestureState) => {
         if (Math.abs(gestureState.dx) > Math.abs(gestureState.dy)) {
           if (gestureState.dx < 0) {
-            const newWidth = Math.max(cardWidth + gestureState.dx, cardWidth - deleteButtonWidth);
+            const newWidth = Math.max(cardWidth + gestureState.dx, cardWidth - totalActionsWidth);
             width.setValue(newWidth);
           } else if (isOpen && gestureState.dx > 0) {
-            const newWidth = Math.min(cardWidth - deleteButtonWidth + gestureState.dx, cardWidth);
+            const newWidth = Math.min(cardWidth - totalActionsWidth + gestureState.dx, cardWidth);
             width.setValue(newWidth);
           }
         }
@@ -89,7 +91,7 @@ const SwipeableItem = ({
         
         if (!isHorizontal) {
           Animated.spring(width, {
-            toValue: isOpen ? cardWidth - deleteButtonWidth : cardWidth,
+            toValue: isOpen ? cardWidth - totalActionsWidth : cardWidth,
             useNativeDriver: false,
             tension: 40,
             friction: 8,
@@ -101,7 +103,7 @@ const SwipeableItem = ({
         
         if (dx < -30 || (hasSwipeVelocity && vx < 0)) {
           Animated.spring(width, {
-            toValue: cardWidth - deleteButtonWidth,
+            toValue: cardWidth - totalActionsWidth,
             useNativeDriver: false,
             tension: 40,
             friction: 8,
@@ -117,7 +119,7 @@ const SwipeableItem = ({
           setIsOpen(false);
         } else {
           Animated.spring(width, {
-            toValue: isOpen ? cardWidth - deleteButtonWidth : cardWidth,
+            toValue: isOpen ? cardWidth - totalActionsWidth : cardWidth,
             useNativeDriver: false,
             tension: 40,
             friction: 8,
@@ -128,7 +130,7 @@ const SwipeableItem = ({
         onSwipeEnd();
         
         Animated.spring(width, {
-          toValue: isOpen ? cardWidth - deleteButtonWidth : cardWidth,
+          toValue: isOpen ? cardWidth - totalActionsWidth : cardWidth,
           useNativeDriver: false,
           tension: 40,
           friction: 8,
@@ -137,11 +139,8 @@ const SwipeableItem = ({
     })
   ).current;
 
-
-
   const handleDelete = () => {
     setIsDeleting(true);
-    // Animate container height, margin, and opacity
     Animated.parallel([
       Animated.timing(containerHeight, {
         toValue: 0,
@@ -163,7 +162,19 @@ const SwipeableItem = ({
     });
   };
 
-
+  const handleAddToGrocery = () => {
+    onAddToGrocery();
+    
+    // close the swipe state
+    setIsOpen(false);
+    setSwipeDirection(null);
+    Animated.spring(width, {
+      toValue: cardWidth,
+      useNativeDriver: false,
+      tension: 40,
+      friction: 8,
+    }).start();
+  };
 
   const handleCardPress = () => {
     if (isOpen) {
@@ -174,16 +185,15 @@ const SwipeableItem = ({
         friction: 8,
       }).start();
       setIsOpen(false);
+    } else {
+      // Open edit modal on tap when card is closed
+      onEdit();
     }
   };
-
-
 
   const handleLongPress = () => {
     handleDelete();
   };
-
-
 
   if (isGridView) {
     return (
@@ -214,8 +224,6 @@ const SwipeableItem = ({
     );
   }
 
-
-
   return (
     <Animated.View 
       style={[
@@ -228,12 +236,21 @@ const SwipeableItem = ({
       ]}
     >
       <View style={styles.swipeableContainer}>
-        <View style={styles.deleteButtonContainer}>
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={styles.groceryButton}
+            onPress={handleAddToGrocery}
+          >
+            <Ionicons name="cart" size={20} color="#fff" />
+            <Text style={styles.actionButtonText}>Grocery</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDelete}
           >
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Ionicons name="trash" size={20} color="#fff" />
+            <Text style={styles.actionButtonText}>Delete</Text>
           </TouchableOpacity>
         </View>
 
@@ -272,25 +289,30 @@ const SwipeableItem = ({
   );
 };
 
-
-
 const MyPantryScreen = () => {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const flatListRef = useRef<FlatList>(null);
   
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
-
-
-
   const [searchTerm, setSearchTerm] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('');
   const [newDate, setNewDate] = useState(new Date());
   const [isGridView, setIsGridView] = useState(false);
+  
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState<PantryItem | null>(null);
+  const [editQuantity, setEditQuantity] = useState('');
+  const [editUnit, setEditUnit] = useState('');
+  const [showUnitDropdown, setShowUnitDropdown] = useState(false);
+  
+  const [newItemUnit, setNewItemUnit] = useState('');
+  const [showNewItemUnitDropdown, setShowNewItemUnitDropdown] = useState(false);
 
-  // In your component:
+  const units = ['kg', 'lbs', 'g', 'oz', 'ml', 'L', 'cups', 'tbsp', 'tsp', 'pieces'];
+
   const params = useLocalSearchParams();
   const router = useRouter();
 
@@ -306,17 +328,14 @@ const MyPantryScreen = () => {
     }
   }, [params.openModal]);
 
-
   useFocusEffect(
-      React.useCallback(() => {      
-        loadPantryItems();
-        return () => {};
-      }, []) 
+    React.useCallback(() => {      
+      loadPantryItems();
+      return () => {};
+    }, []) 
   );
 
   const loadPantryItems = async () => {
-    // const { data: { user } } = await supabase.auth.getUser();
-    // console.log('Current user pantry:', user); // Should not be null
     const pantryResult = await fetchAllData('expiration');
     setPantryItems(pantryResult.data)
   };
@@ -341,25 +360,24 @@ const MyPantryScreen = () => {
     })
   }, [])
 
-
   const addItem = async () => {
     if (newItemName && newItemQuantity && newDate) {
       const newDateString = newDate.toISOString().substring(0, 10);
+      const fullQuantity = newItemUnit ? `${newItemQuantity} ${newItemUnit}` : newItemQuantity;
       
       const newItem = {
         id: Date.now().toString(),
         name: newItemName,
-        quantity: newItemQuantity,
+        quantity: fullQuantity,
         expirationDate: newDateString,
       };
 
-      // const newItem = { id: Date.now().toString(), text: itemText, completed: false };
-      // sortItems([...items, newItem]);
-      // setInputText('');
       await insertData('expiration', newItem, session);
       setPantryItems([...pantryItems, newItem]);
       setNewItemName('');
       setNewItemQuantity('');
+      setNewItemUnit('');
+      setShowNewItemUnitDropdown(false);
       setNewDate(new Date());
       setModalVisible(false);
     } else {
@@ -367,29 +385,92 @@ const MyPantryScreen = () => {
     }
   };
 
-
-
   const removeItem = async (id: string) => {
     setPantryItems(pantryItems.filter((item) => item.id !== id));
-    const result = await deleteById('expiration', id);
+    await deleteById('expiration', id);
+  };
+
+  const addToGroceryList = async (item: PantryItem) => {
+    try {
+      // Create grocery item with same name
+      const groceryItem = {
+        id: Date.now().toString(),
+        text: item.name,
+        completed: false,
+      };
+      
+      // Add to grocery list without removing from pantry
+      await insertData('groceryList', groceryItem, session);
+      
+      Alert.alert(
+        `"${item.name}" Has Been Added to Grocery List`,
+        '',
+        [{ text: 'OK', style: 'default' }]
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item to grocery list');
+      console.error(error);
+    }
+  };
+
+  const openEditModal = (item: PantryItem) => {
+    setEditingItem(item);
+    // Parse existing quantity to separate number and unit
+    const match = item.quantity.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+    if (match) {
+      setEditQuantity(match[1]);
+      setEditUnit(match[2] || '');
+    } else {
+      setEditQuantity(item.quantity);
+      setEditUnit('');
+    }
+    setEditModalVisible(true);
+  };
+
+  const updateItemQuantity = async () => {
+    if (!editingItem || !editQuantity.trim()) {
+      Alert.alert('Error', 'Please enter a valid quantity');
+      return;
+    }
+
+    try {
+      // Combine quantity and unit
+      const fullQuantity = editUnit ? `${editQuantity} ${editUnit}` : editQuantity;
+      
+      // Update in database
+      await updateById('expiration', editingItem.id, { quantity: fullQuantity });
+      
+      // Update local state
+      setPantryItems(pantryItems.map(item => 
+        item.id === editingItem.id 
+          ? { ...item, quantity: fullQuantity }
+          : item
+      ));
+      
+      setEditModalVisible(false);
+      setEditingItem(null);
+      setEditQuantity('');
+      setEditUnit('');
+      
+      Alert.alert('Success', 'Quantity updated successfully');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update quantity');
+      console.error(error);
+    }
   };
 
   const [permission, requestPermission] = useCameraPermissions();
 
-  // --- THIS IS THE NEW HANDLER FUNCTION --- // <-- CHANGED
   const handleScanPress = async () => {
     let currentPermission = permission;
     
-    // If we don't have permission details yet, or it's not granted, request it
     if (!currentPermission?.granted) {
       currentPermission = await requestPermission();
     }
     
-    // If permission is granted (either before or just now), navigate
     if (currentPermission.granted) {
       router.push('/scan');
     } else {
-      // Optional: Handle the case where permission is denied
       Alert.alert('Permission Denied', 'Camera permission is required to scan barcodes.');
     }
   };
@@ -398,26 +479,22 @@ const MyPantryScreen = () => {
     flatListRef.current?.setNativeProps({ scrollEnabled: false });
   };
 
-
-
   const handleSwipeEnd = () => {
     flatListRef.current?.setNativeProps({ scrollEnabled: true });
   };
-
-
 
   const renderItem = ({ item }: { item: PantryItem }) => (
     <SwipeableItem
       item={item}
       onDelete={() => removeItem(item.id)}
+      onAddToGrocery={() => addToGroceryList(item)}
+      onEdit={() => openEditModal(item)}
       colorScheme={colorScheme}
       onSwipeStart={handleSwipeStart}
       onSwipeEnd={handleSwipeEnd}
       isGridView={isGridView}
     />
   );
-
-
 
   const onChange = (event, selectedDate) => {
     const currentDate = selectedDate || newDate;
@@ -432,13 +509,10 @@ const MyPantryScreen = () => {
       ]}
       edges={['top', 'left', 'right']}
     >
-      {/* Header */}
       <View style={[styles.headerContainer, { backgroundColor: colors.background }]}>
         <Text style={[styles.header, { color: colors.text }]}>My Pantry</Text>
       </View>
 
-
-      {/* Search Bar with Toggle Button */}
       <View style={[styles.searchContainer, { backgroundColor: colors.background }]}>
         <TextInput
           style={[
@@ -470,9 +544,6 @@ const MyPantryScreen = () => {
         </TouchableOpacity>
       </View>
 
-
-
-      {/* Pantry Items List */}
       <FlatList
         key={isGridView ? 'grid' : 'list'}
         ref={flatListRef}
@@ -487,9 +558,6 @@ const MyPantryScreen = () => {
         }
       />
 
-
-
-      {/* Add Button */}
       <TouchableOpacity
         style={[
           styles.addButton,
@@ -503,7 +571,6 @@ const MyPantryScreen = () => {
         ]}>+ Add Item</Text>
       </TouchableOpacity>
 
-      {/* Add Button */}
       <TouchableOpacity
         style={[
           styles.scanButton,
@@ -517,9 +584,6 @@ const MyPantryScreen = () => {
         ]}>+ Scan Item</Text>
       </TouchableOpacity>
 
-
-
-      {/* Add Item Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -532,8 +596,6 @@ const MyPantryScreen = () => {
             { backgroundColor: colors.background }
           ]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Add New Item</Text>
-
-
 
             <TextInput
               style={[
@@ -550,8 +612,7 @@ const MyPantryScreen = () => {
               onChangeText={setNewItemName}
             />
 
-
-
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Amount:</Text>
             <TextInput
               style={[
                 styles.input,
@@ -561,21 +622,72 @@ const MyPantryScreen = () => {
                   color: colors.text
                 }
               ]}
-              placeholder="Quantity (e.g., 2 kg, 500 ml)"
+              placeholder="e.g., 20"
               placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
               value={newItemQuantity}
               onChangeText={setNewItemQuantity}
+              keyboardType="decimal-pad"
             />
-            <Text>Expiration Date:</Text>
+
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Unit:</Text>
+            <TouchableOpacity
+              style={[
+                styles.unitSelector,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                }
+              ]}
+              onPress={() => setShowNewItemUnitDropdown(!showNewItemUnitDropdown)}
+            >
+              <Text style={[styles.unitSelectorText, { color: colors.text }]}>
+                {newItemUnit || 'Select unit'}
+              </Text>
+              <Ionicons 
+                name={showNewItemUnitDropdown ? 'chevron-up' : 'chevron-down'} 
+                size={20} 
+                color={colors.text}
+              />
+            </TouchableOpacity>
+
+            {showNewItemUnitDropdown && (
+              <ScrollView 
+                style={[styles.unitDropdown, { backgroundColor: colors.card }]}
+                scrollEnabled={true}
+                nestedScrollEnabled={true}
+              >
+                {units.map((unit) => (
+                  <TouchableOpacity
+                    key={unit}
+                    style={[
+                      styles.unitOption,
+                      newItemUnit === unit && { backgroundColor: colors.buttonBackground }
+                    ]}
+                    onPress={() => {
+                      setNewItemUnit(unit);
+                      setShowNewItemUnitDropdown(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.unitOptionText,
+                        { color: newItemUnit === unit ? colors.buttonText : colors.text }
+                      ]}
+                    >
+                      {unit}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Expiration Date:</Text>
             <DateTimePicker
-                  testID="dateTimePicker"
-                  value={newDate}
-                  is24Hour={true}
-                  display="default"
-                  onChange={onChange}
+              testID="dateTimePicker"
+              value={newDate}
+              is24Hour={true}
+              display="default"
+              onChange={onChange}
             />
-
-
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -584,15 +696,20 @@ const MyPantryScreen = () => {
                   styles.cancelButton,
                   { backgroundColor: colors.secondaryButton }
                 ]}
-                onPress={() => setModalVisible(false)}
+                onPress={() => {
+                  setModalVisible(false);
+                  setNewItemName('');
+                  setNewItemQuantity('');
+                  setNewItemUnit('');
+                  setShowNewItemUnitDropdown(false);
+                  setNewDate(new Date());
+                }}
               >
                 <Text style={[
                   styles.cancelButtonText,
                   { color: colors.secondaryButtonText }
                 ]}>Cancel</Text>
               </TouchableOpacity>
-
-
 
               <TouchableOpacity
                 style={[
@@ -611,11 +728,136 @@ const MyPantryScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Item Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContent,
+            { backgroundColor: colors.background }
+          ]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Edit "{editingItem?.name}" Quantity
+            </Text>
+
+            {/* Amount Input */}
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Amount:</Text>
+            <TextInput
+              style={[
+                styles.input,
+                { 
+                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                  color: colors.text
+                }
+              ]}
+              placeholder="e.g., 20"
+              placeholderTextColor={colorScheme === 'dark' ? '#8E8E93' : '#999'}
+              value={editQuantity}
+              onChangeText={setEditQuantity}
+              keyboardType="decimal-pad"
+            />
+
+            {/* Unit Selector */}
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Unit:</Text>
+            <TouchableOpacity
+              style={[
+                styles.unitSelector,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                }
+              ]}
+              onPress={() => setShowUnitDropdown(!showUnitDropdown)}
+            >
+              <Text style={[styles.unitSelectorText, { color: colors.text }]}>
+                {editUnit || 'Select unit'}
+              </Text>
+              <Ionicons 
+                name={showUnitDropdown ? 'chevron-up' : 'chevron-down'} 
+                size={20} 
+                color={colors.text}
+              />
+            </TouchableOpacity>
+
+            {/* Unit Dropdown */}
+            {showUnitDropdown && (
+              <ScrollView 
+                style={[styles.unitDropdown, { backgroundColor: colors.card }]}
+                scrollEnabled={true}
+                nestedScrollEnabled={true}
+              >
+                {units.map((unit) => (
+                  <TouchableOpacity
+                    key={unit}
+                    style={[
+                      styles.unitOption,
+                      editUnit === unit && { backgroundColor: colors.buttonBackground }
+                    ]}
+                    onPress={() => {
+                      setEditUnit(unit);
+                      setShowUnitDropdown(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.unitOptionText,
+                        { color: editUnit === unit ? colors.buttonText : colors.text }
+                      ]}
+                    >
+                      {unit}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton, 
+                  styles.cancelButton,
+                  { backgroundColor: colors.secondaryButton }
+                ]}
+                onPress={() => {
+                  setEditModalVisible(false);
+                  setEditingItem(null);
+                  setEditQuantity('');
+                  setEditUnit('');
+                  setShowUnitDropdown(false);
+                }}
+              >
+                <Text style={[
+                  styles.cancelButtonText,
+                  { color: colors.secondaryButtonText }
+                ]}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButton, 
+                  styles.saveButton,
+                  { backgroundColor: colors.buttonBackground }
+                ]}
+                onPress={updateItemQuantity}
+              >
+                <Text style={[
+                  styles.saveButtonText,
+                  { color: colors.buttonText }
+                ]}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   container: {
@@ -670,14 +912,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
-  deleteButtonContainer: {
+  actionButtonsContainer: {
     position: 'absolute',
     right: 0,
     top: 0,
     bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  groceryButton: {
+    backgroundColor: '#92bf92ff',
     justifyContent: 'center',
     alignItems: 'center',
     width: 100,
+    height: '100%',
+    borderRadius: 12,
+    marginRight: 4,
   },
   deleteButton: {
     backgroundColor: '#ff4444',
@@ -687,10 +937,11 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 12,
   },
-  deleteButtonText: {
+  actionButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+    marginTop: 2,
   },
   itemCard: {
     borderRadius: 12,
@@ -797,6 +1048,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 16,
   },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 4,
+  },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -808,12 +1065,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: 6,
   },
-  cancelButton: {
-    // backgroundColor set dynamically
-  },
-  saveButton: {
-    // backgroundColor set dynamically
-  },
+  cancelButton: {},
+  saveButton: {},
   cancelButtonText: {
     textAlign: 'center',
     fontSize: 16,
@@ -824,8 +1077,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  unitSelector: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    fontSize: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  unitSelectorText: {
+    fontSize: 16,
+  },
+  unitDropdown: {
+    borderRadius: 8,
+    marginBottom: 12,
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+  unitOption: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  unitOptionText: {
+    fontSize: 16,
+  },
 });
-
-
 
 export default MyPantryScreen;
