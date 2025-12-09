@@ -108,6 +108,7 @@ export default function RecipeTabScreen() {
   const MAX_PER_INGREDIENT_EXPIRING = 3;
   const MAX_PER_INGREDIENT_PANTRY = 3;
 
+  // 🔧 FIXED: Better date comparison that handles both formats
   const toDateOnly = (d: Date) => {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   };
@@ -118,25 +119,45 @@ export default function RecipeTabScreen() {
       const items = (result as any).data as PantryItem[];
       setPantryItems(items);
 
-      const today = toDateOnly(new Date());
-      const weekFromNow = toDateOnly(
-        new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7),
-      );
+      // 🔧 FIXED: Better date parsing and comparison
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset to midnight
+      
+      const weekFromNow = new Date(today);
+      weekFromNow.setDate(weekFromNow.getDate() + 7);
+
+      console.log('Today:', today.toISOString());
+      console.log('Week from now:', weekFromNow.toISOString());
 
       const expiring = items.filter((item) => {
-        const raw = item.expirationDate?.split('T')[0] ?? item.expirationDate;
-        const parsed = new Date(raw);
-
-        if (isNaN(parsed.getTime())) {
-          console.warn('Could not parse expirationDate for item', item);
+        if (!item.expirationDate) {
+          console.warn('Item has no expiration date:', item);
           return false;
         }
 
-        const dateOnly = toDateOnly(parsed);
-        return dateOnly >= today && dateOnly <= weekFromNow;
+        // Handle both "2025-12-09" and "2025-12-09T00:00:00" formats
+        let dateStr = item.expirationDate;
+        if (dateStr.includes('T')) {
+          dateStr = dateStr.split('T')[0];
+        }
+
+        // Parse the date string (YYYY-MM-DD format)
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const expirationDate = new Date(year, month - 1, day); // month is 0-indexed
+        expirationDate.setHours(0, 0, 0, 0);
+
+        if (isNaN(expirationDate.getTime())) {
+          console.warn('Could not parse expirationDate for item:', item);
+          return false;
+        }
+
+        console.log(`Item: ${item.name}, Expiration: ${expirationDate.toISOString()}, In range: ${expirationDate >= today && expirationDate <= weekFromNow}`);
+
+        return expirationDate >= today && expirationDate <= weekFromNow;
       });
 
       setExpiringItems(expiring);
+      console.log(`Found ${expiring.length} expiring items:`, expiring.map(i => i.name));
     } else {
       console.error('Error loading items:', (result as any).error);
       setPantryItems([]);
@@ -262,8 +283,10 @@ export default function RecipeTabScreen() {
           }
         }
       } else if (filterType === 'expiring') {
+        console.log('Fetching recipes for expiring items:', expiringItems.length);
         await fetchRecipesByPantryItems(expiringItems, 'expiring');
       } else if (filterType === 'pantry') {
+        console.log('Fetching recipes for pantry items:', pantryItems.length);
         await fetchRecipesByPantryItems(pantryItems, 'pantry');
       }
     } catch (error) {
@@ -280,12 +303,12 @@ export default function RecipeTabScreen() {
     fetchRecipes();
   }, [filterType, selectedCategory, expiringItems, pantryItems]);
 
-  // 🔧 FIXED: Now searches BOTH recipe names AND ingredients
   const fetchRecipesByPantryItems = async (
     items: PantryItem[],
     mode: 'expiring' | 'pantry',
   ) => {
     if (!items || items.length === 0) {
+      console.log(`No ${mode} items to fetch recipes for`);
       setRecipes([]);
       return;
     }
@@ -303,14 +326,12 @@ export default function RecipeTabScreen() {
         const ingredientQuery = rawName.toLowerCase().replace(/\s+/g, '_');
         let combinedMeals: any[] = [];
 
-        // 🔧 NEW: Search by recipe NAME (search.php)
         const fetchByName = async (q: string) => {
           const url = `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(q)}`;
           const res = await fetch(url);
           return res.json();
         };
 
-        // 🔧 EXISTING: Search by INGREDIENT (filter.php)
         const fetchByIngredient = async (q: string) => {
           const url = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(q)}`;
           const res = await fetch(url);
@@ -331,7 +352,6 @@ export default function RecipeTabScreen() {
         try {
           const ingredientData = await fetchByIngredient(ingredientQuery);
           if (ingredientData?.meals && ingredientData.meals.length > 0) {
-            // Merge with name results, avoiding duplicates
             const existingIds = new Set(combinedMeals.map(m => m.idMeal));
             const newMeals = ingredientData.meals.filter((m: any) => !existingIds.has(m.idMeal));
             combinedMeals = [...combinedMeals, ...newMeals];
@@ -356,13 +376,11 @@ export default function RecipeTabScreen() {
           const altQuery = alt.replace(/\s+/g, '_');
           
           try {
-            // Try name search with alternative
             const altNameData = await fetchByName(altQuery);
             if (altNameData?.meals && altNameData.meals.length > 0) {
               combinedMeals = [...altNameData.meals];
             }
 
-            // Try ingredient search with alternative
             const altIngredientData = await fetchByIngredient(altQuery);
             if (altIngredientData?.meals && altIngredientData.meals.length > 0) {
               const existingIds = new Set(combinedMeals.map(m => m.idMeal));
@@ -380,7 +398,6 @@ export default function RecipeTabScreen() {
 
         const totalForIngredient = combinedMeals.length;
 
-        // Shuffle if >2, then slice to MAX_PER_INGREDIENT
         const shuffledMeals = totalForIngredient > 2 
           ? shuffleArray(combinedMeals) 
           : combinedMeals;
@@ -417,7 +434,6 @@ export default function RecipeTabScreen() {
         allRecipes.push(...formattedRecipes);
       }
 
-      // Deduplicate and merge matched ingredients
       const recipeMap = new Map<string, Recipe>();
       allRecipes.forEach((recipe) => {
         if (!recipe.id) return;
@@ -437,6 +453,7 @@ export default function RecipeTabScreen() {
       });
 
       const finalRecipes = Array.from(recipeMap.values());
+      console.log(`Setting ${finalRecipes.length} recipes for ${mode} mode`);
       setRecipes(finalRecipes);
     } catch (error) {
       console.error('Error fetching recipes by pantry items:', error);
@@ -978,6 +995,7 @@ export default function RecipeTabScreen() {
 }
 
 const styles = StyleSheet.create({
+  // ... (all styles remain the same)
   safeArea: {
     flex: 1,
   },
