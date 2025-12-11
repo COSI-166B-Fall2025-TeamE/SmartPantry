@@ -307,6 +307,8 @@ const MyPantryScreen = () => {
   const [editQuantity, setEditQuantity] = useState('');
   const [editUnit, setEditUnit] = useState('');
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
+  const [editExpirationDate, setEditExpirationDate] = useState(new Date());
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
   
   const [newItemUnit, setNewItemUnit] = useState('');
   const [showNewItemUnitDropdown, setShowNewItemUnitDropdown] = useState(false);
@@ -424,6 +426,13 @@ const MyPantryScreen = () => {
       setEditQuantity(item.quantity);
       setEditUnit('');
     }
+    // Parse existing expiration date
+    const itemData = pantryItems.find(i => i.id === item.id) as any;
+    if (itemData?.expirationDate) {
+      setEditExpirationDate(new Date(itemData.expirationDate));
+    } else {
+      setEditExpirationDate(new Date());
+    }
     setEditModalVisible(true);
   };
 
@@ -436,14 +445,18 @@ const MyPantryScreen = () => {
     try {
       // Combine quantity and unit
       const fullQuantity = editUnit ? `${editQuantity} ${editUnit}` : editQuantity;
+      const expirationDateString = editExpirationDate.toISOString().substring(0, 10);
       
       // Update in database
-      await updateById('expiration', editingItem.id, { quantity: fullQuantity });
+      await updateById('expiration', editingItem.id, { 
+        quantity: fullQuantity,
+        expirationDate: expirationDateString 
+      });
       
       // Update local state
       setPantryItems(pantryItems.map(item => 
         item.id === editingItem.id 
-          ? { ...item, quantity: fullQuantity }
+          ? { ...item, quantity: fullQuantity, expirationDate: expirationDateString }
           : item
       ));
       
@@ -452,9 +465,9 @@ const MyPantryScreen = () => {
       setEditQuantity('');
       setEditUnit('');
       
-      Alert.alert('Success', 'Quantity updated successfully');
+      Alert.alert('Success', 'Item updated successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update quantity');
+      Alert.alert('Error', 'Failed to update item');
       console.error(error);
     }
   };
@@ -741,9 +754,17 @@ const MyPantryScreen = () => {
             styles.modalContent,
             { backgroundColor: colors.background }
           ]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Edit "{editingItem?.name}" Quantity
-            </Text>
+            <View style={styles.editTitleContainer}>
+              <Text style={[styles.modalTitle, { color: colors.text, marginBottom: 0 }]}>Edit</Text>
+              <View style={[
+                styles.itemBadge,
+                { backgroundColor: colors.buttonBackground }
+              ]}>
+                <Text style={[styles.badgeText, { color: colors.buttonText }]}>
+                  {editingItem?.name}
+                </Text>
+              </View>
+            </View>
 
             {/* Amount Input */}
             <Text style={[styles.inputLabel, { color: colors.text }]}>Amount:</Text>
@@ -817,6 +838,42 @@ const MyPantryScreen = () => {
               </ScrollView>
             )}
 
+            {/* Expiration Date Picker */}
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Expiration Date:</Text>
+            <TouchableOpacity
+              style={[
+                styles.unitSelector,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.border,
+                }
+              ]}
+              onPress={() => setShowEditDatePicker(true)}
+            >
+              <Text style={[styles.unitSelectorText, { color: colors.text }]}>
+                {editExpirationDate.toISOString().substring(0, 10)}
+              </Text>
+              <Ionicons 
+                name="calendar" 
+                size={20} 
+                color={colors.text}
+              />
+            </TouchableOpacity>
+
+            {showEditDatePicker && (
+              <DateTimePicker
+                value={editExpirationDate}
+                mode="date"
+                display="default"
+                onChange={(event, selectedDate) => {
+                  setShowEditDatePicker(false);
+                  if (selectedDate) {
+                    setEditExpirationDate(selectedDate);
+                  }
+                }}
+              />
+            )}
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[
@@ -830,6 +887,7 @@ const MyPantryScreen = () => {
                   setEditQuantity('');
                   setEditUnit('');
                   setShowUnitDropdown(false);
+                  setShowEditDatePicker(false);
                 }}
               >
                 <Text style={[
@@ -1105,6 +1163,25 @@ const styles = StyleSheet.create({
   },
   unitOptionText: {
     fontSize: 16,
+  },
+  editTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  itemBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
 
