@@ -313,7 +313,7 @@ const MyPantryScreen = () => {
   const [newItemUnit, setNewItemUnit] = useState('');
   const [showNewItemUnitDropdown, setShowNewItemUnitDropdown] = useState(false);
 
-  const units = ['kg', 'lbs', 'g', 'oz', 'ml', 'L', 'cups', 'tbsp', 'tsp', 'pieces'];
+  const units = ['kg', 'lbs', 'g', 'oz', 'ml', 'L', 'cups', 'tbsp', 'tsp', 'pieces', 'box'];
 
   const params = useLocalSearchParams();
   const router = useRouter();
